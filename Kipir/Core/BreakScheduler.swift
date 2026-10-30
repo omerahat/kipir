@@ -14,6 +14,7 @@ final class BreakScheduler {
         saved.phase == .due && !paused && !meeting && !suspended ? saved.dueID : nil
     }
     private var isIdle = false
+    private(set) var exercises: ExerciseSequenceController?
 
     init(settings: Settings = Settings(), checkpoint: Checkpoint? = nil,
          now: @escaping () -> TimeInterval, date: @escaping () -> Date,
@@ -22,6 +23,7 @@ final class BreakScheduler {
         self.now = now; self.date = date; self.idle = idle
         saved = checkpoint.flatMap { $0.isValid ? $0 : nil } ??
             Checkpoint(target: self.settings.work, today: DailyStats(day: Calendar.current.startOfDay(for: date())))
+        if saved.phase == .onBreak { exercises = ExerciseSequenceController(long: saved.isLongBreak, duration: saved.breakDuration, elapsed: saved.breakDuration - saved.breakRemaining) }
         rollover()
         baseline()
         refreshReminder()
@@ -70,6 +72,7 @@ final class BreakScheduler {
         switch saved.phase {
         case .onBreak:
             pending = 0
+            exercises?.advance(min(delta, saved.breakRemaining))
             saved.breakRemaining = max(0, saved.breakRemaining - delta)
             if saved.breakRemaining == 0 {
                 saved.today.breaks += 1
@@ -100,6 +103,7 @@ final class BreakScheduler {
             saved.breakDuration = saved.isLongBreak ? settings.longBreak : settings.shortBreak
             saved.breakRemaining = saved.breakDuration
             saved.phase = .onBreak
+            exercises = ExerciseSequenceController(long: saved.isLongBreak, duration: saved.breakDuration)
         case .snooze:
             guard saved.phase == .due, !paused, !meeting, !suspended else { return }
             saved.target = saved.activeWork + settings.snooze
@@ -129,6 +133,12 @@ final class BreakScheduler {
         baseline(); refreshReminder()
     }
 
+    func navigateExercise(_ offset: Int) {
+        tick()
+        guard saved.phase == .onBreak else { return }
+        exercises?.navigate(offset)
+    }
+
     private func baseline() {
         let t = now(), i = idle()
         previousTime = t.isFinite ? t : nil
@@ -142,6 +152,7 @@ final class BreakScheduler {
         saved.today = DailyStats(day: day); pending = 0; return true
     }
     private func resetInterval() {
+        exercises = nil
         saved.activeWork = 0; saved.target = settings.work; saved.phase = .working
         saved.breakRemaining = 0; saved.isLongBreak = false; saved.snoozed = false
     }

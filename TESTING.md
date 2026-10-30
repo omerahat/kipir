@@ -41,3 +41,52 @@ The initial unsigned bundle was absent from macOS System Settings → Notificati
 A separate reviewer inspected the engine, native adapters, UI and tests. Its important finding—discarded provisional input-free time while Due—was reproduced with a red regression (61 versus 91 seconds), fixed by preserving the provisional span, and included in the final 25 green tests. The reviewer confirmed that correction and reported no further critical/important finding. This review does not replace the open OS/device gates.
 
 The one-line `open` command is silent because Kıpır is menu-bar-only. Click the walking-person icon in the menu bar to open the panel. In Settings, click **Bildirim izni iste** and choose Allow in the macOS prompt. Then open Apple menu → System Settings → Notifications → Kıpır to adjust alerts and sound.
+
+## Animated exercise guide — 2026-10-30
+- SPM: **31 XCTest cases passed, 0 failures**, including six exercise tests (order/default durations, advance/navigation, pause/sleep integration, uncredited manual finish, restart position, and 300-second long guide completion entirely without input).
+- Xcode: **TEST SUCCEEDED**, 31 cases, 0 failures. Result: `build/Logs/Test/Test-Kipir-2026.10.30_18-32-31-+0300.xcresult`. App sources and existing target membership compiled with native Canvas/TimelineView/NSWindow.
+- Static key-pose sheet for all five movements was rendered offscreen and visually inspected in light appearance. This is illustration/layout evidence, not a video or a human assessment of movement accuracy. Native desktop automation timed out when opening the updated app. Continuous cycles, full-window light/dark appearance, VoiceOver, focus order, close/reopen interaction and physical sleep/wake remain human acceptance gates.
+- First build/test attempts failed with **No space left on device**. Only temporary build directories created in this session were removed; cached reruns passed. About 441 MiB free remained at that check; additional builds may require user-managed disk space.
+- Manual procedure: start a short break; confirm the guide embedded in the menu bar popover, previous/next (arrow keys), Space pause, skip and early finish. Dismiss and reopen using the menu bar icon. Leave the computer past AFK and confirm the guide continues. Set long-break frequency to 1, complete a short timer, then verify the three-minute final walk. Repeat in light/dark and Reduce Motion (two static poses), and with VoiceOver. Early finish and skipping the final exercise must not increment completed timers. Manual navigation must not extend the total break budget.
+- Independent read-only review found no critical/important correctness issue in exercise playback, scheduler integration or window lifecycle. No medical or exercise-performance validation is claimed.
+
+
+## Embedded popover guide — 2026-10-30
+Reverted dataset instruction/provenance changes and removed the separate window controller. App build and Xcode tests passed (31 tests, 0 failures); SPM passed 31 tests, 0 failures. Logs: `/tmp/kipir-popover-xcode.log` and `/tmp/kipir-popover-swift.log`. No scheduler timing changes were needed. `git diff --check` passed. Manual acceptance remains pending: start a break in the menu popover, use all controls, dismiss/reopen and confirm continued countdown; check small-screen layout, light/dark, Reduce Motion and VoiceOver. Prior dedicated-window verification above is historical, superseded by this presentation.
+
+## Homebrew preview packaging — 2026-10-30
+
+- `bash Scripts/package-release.sh`: **passed**, universal arm64/x86_64 Release
+  build, ad hoc signed with command-line overrides only. Log:
+  `build/package-release.log`. Produced `dist/Kipir-0.1.0.zip` (443 KiB), its
+  `.zip.sha256` sidecar and `Casks/kipir.rb`. SHA-256:
+  `fb3959f8453b80d2bb5cd9342914e3baaa887f802498d38d3e22eea621fb7cb9`.
+- ZIP integrity and exact cask/sidecar SHA-256 comparison passed. Extracted the
+  ZIP into a temporary directory with `ditto -x -k`, then ran
+  `codesign --verify --deep --strict` and `lipo -verify_arch arm64 x86_64` on
+  that extracted app: **passed**. This is ad hoc signature integrity, not
+  Developer ID, notarization or Gatekeeper acceptance.
+- `bash -n Scripts/package-release.sh`, `ruby -c Casks/kipir.rb`, and
+  `python3 Scripts/test-package-release.py`: **passed**, 2 guard tests covering
+  unexpected arguments, invalid version and refusal to overwrite an existing
+  archive without changing its bytes or starting a build.
+- Homebrew's own `Cask::CaskLoader.load(File.read("Casks/kipir.rb"))` accepted
+  the final cask; explicit version and expanded download URL checks passed.
+  First path-based attempt was rejected because the checkout is not installed
+  as a tap; content-based validation requires no tap/install. Updated deprecated
+  macOS string comparison to the current `depends_on macos: :sonoma` syntax;
+  final validation passed without that warning. Homebrew required normal cache
+  access outside the sandbox and downloaded its API metadata. No app install ran.
+- SPM: **31 XCTest cases, 0 failures** using
+  `CLANG_MODULE_CACHE_PATH=/tmp/kipir-clang SWIFTPM_MODULECACHE_OVERRIDE=/tmp/kipir-swift swift test --disable-sandbox --scratch-path /tmp/kipir-initial-tests`.
+  Log: `/tmp/kipir-brew-swift.log`.
+- Xcode Debug build and tests: **BUILD SUCCEEDED / TEST SUCCEEDED**, 31 XCTest
+  cases, 0 failures using the documented ad hoc command with `build test`.
+  First sandboxed test attempt could not connect to testmanagerd; approved
+  rerun passed. Log: `/tmp/kipir-brew-xcode-approved.log`; result:
+  `build/Logs/Test/Run-Kipir-2026.10.30_20-10-08-+0300.xcresult`.
+- No push, tag, GitHub Release, downloaded Homebrew install/upgrade/uninstall,
+  Gatekeeper interaction, notarization, Intel runtime or actual macOS 14 runtime
+  test was performed. Notification/login, physical lifecycle and human UI
+  acceptance gates remain open. The cask download URL will work only after the
+  matching release asset and cask are published. Existing dirty work was preserved.

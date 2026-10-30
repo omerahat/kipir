@@ -14,3 +14,6 @@ Inspect dirty tree first; preserve existing work. Use deterministic clocks for n
 
 ## Documentation and Done
 Update TASKS.md plus DECISIONS.md/CHANGELOG.md for behavior changes. Record actual command results and gaps in TESTING.md. Done requires complete callers/config/project membership, relevant tests/build passing, no extra permissions/content collection, matching docs. Never claim notification delivery, physical sleep/wake, accessibility or signing from unit tests alone. Keep human/device acceptance pending until evidence exists. Do not deploy, push or change signing identities without authorization.
+
+## Exercise conventions
+Exercise catalog/playback remain Foundation-only. Feed playback solely from scheduler-accepted countdown deltas; never add a second countdown timer. TimelineView is rendering-only. Render guidance in the menu bar popover; dismissing it must not finish a break. Preserve existing completion statistics semantics; manual finishes/skips are uncredited. New movement definitions need localized names/instructions and human pose review.

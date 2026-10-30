@@ -1,6 +1,6 @@
 # Kıpır — Implementation checklist
 
-Status separates implemented/automated evidence from human or device acceptance. No release, push or distribution is authorized.
+Status separates implemented/automated evidence from human or device acceptance. Local Homebrew packaging is authorized; publishing, push and signing identity changes require separate authorization.
 
 ## Milestone 1 — Foundation
 - [x] Native project and identity. Acceptance: shared Kipir scheme, configurable bundle ID, 0.1.0, macOS 14 and LSUIElement; Debug app build passed.
@@ -33,3 +33,23 @@ Status separates implemented/automated evidence from human or device acceptance.
 - [ ] Extended resource-use/device acceptance and signing/notarization. Acceptance: measured session and distribution review; these are explicitly unfinished, not required to fabricate a local success claim.
 
 - [x] Independent source review. Acceptance: reported due-state accounting defect reproduced and fixed, regression passed, reviewer confirmed correction; no additional critical/important source finding remained.
+
+## Animated exercise guide
+- [x] Implement catalog and playback driven by scheduler deltas; deterministic tests cover ordering/durations, automatic advance, navigation, AFK, pause/sleep, restore and single completion.
+- [x] Implement embedded menu bar break guide, native Canvas poses, controls, keyboard shortcuts and reduced-motion key poses; project membership reuses existing compiled source files.
+- [x] Final build/test results: SPM and Xcode each passed 31 cases; Debug app builds with the existing target. See TESTING.md for evidence and disk-space interruption.
+- [ ] Human acceptance: inspect shoulder/wrist/chest/calf/walking cycles in light/dark; check keyboard/VoiceOver, close/reopen and physical sleep/wake. No exercise accuracy/medical validation claimed.
+
+## Popover exercise presentation
+- [x] Revert dataset instructions, provenance and bundled license; preserve original vector guide.
+- [x] Replace separate break window with the guide in the existing menu bar popover; retain controls and background countdown.
+- [ ] Live light/dark, keyboard and close/reopen acceptance on device.
+
+- [x] Popover verification: app compiled; Xcode and SPM each passed 31 tests, 0 failures.
+
+## Homebrew preview distribution
+- [x] Native Release ZIP packaging script and generated SHA-256 cask; use existing GitHub repository as an explicit-URL tap.
+- [x] Turkish installation, update, uninstall and Gatekeeper guidance; no quarantine bypass, dependency or runtime network code.
+- [ ] Publish reviewed source/cask and matching immutable v0.1.0 Release assets after explicit authorization.
+- [ ] Test downloaded Homebrew install/upgrade/uninstall and OS integrations on a separate Mac, including macOS 14 and Intel.
+- [ ] Developer ID/notarization remain outside the free preview path.
