@@ -90,3 +90,11 @@ Reverted dataset instruction/provenance changes and removed the separate window 
   test was performed. Notification/login, physical lifecycle and human UI
   acceptance gates remain open. The cask download URL will work only after the
   matching release asset and cask are published. Existing dirty work was preserved.
+
+## Turkish / English language choice — 2026-10-30
+
+- SPM: **31 XCTest cases, 0 failures**, using the cache/scratch-path command above. Log: `/tmp/kipir-language-swift.log`.
+- Xcode Debug `build test`: **BUILD SUCCEEDED / TEST SUCCEEDED**, **31 XCTest cases, 0 failures**, using existing project signing settings. The sandboxed runs built successfully but could not connect to testmanagerd; the approved unsandboxed rerun passed. Log: `/tmp/kipir-language-xcode-approved.log`; result: `build/Logs/Test/Run-Kipir-2026.10.30_22-35-49-+0300.xcresult`. No project signing identity changed.
+- `python3 Scripts/test-localization.py`: **2 checks passed** for equal Turkish/English keys, duplicate/empty entries, literal L calls, language labels and both built resource paths. `plutil -lint` passed for both string tables and the project; `git diff --check` passed.
+- The log directly reports test totals. An optional `xcresulttool get test-results summary` read failed when the tool attempted to write its TestReport cache outside permitted paths; no extra permission was needed to establish the test result from the log.
+- Manual acceptance remains pending: choose English in Settings → General → Dil; verify immediate panel/settings/guide updates, switch back, quit/relaunch and confirm selection persists. Check English layout, keyboard/VoiceOver, and newly delivered notification text/actions. Already delivered bodies retain their language; underlying OS error details follow macOS. No notification delivery, physical lifecycle or human accessibility acceptance is claimed.

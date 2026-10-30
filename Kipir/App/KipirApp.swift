@@ -7,6 +7,7 @@ struct KipirApp: App {
     var body: some Scene {
         MenuBarExtra {
             MenuBarView(controller: controller).preferredColorScheme(controller.colorScheme)
+                .environment(\.locale, Locale(identifier: controller.language))
         } label: {
             Image(systemName: controller.engine.status == .due ? "figure.walk.circle.fill" : "figure.walk")
                 .accessibilityLabel(L("app.name") + ", " + L("status." + controller.engine.status.rawValue))
@@ -14,6 +15,7 @@ struct KipirApp: App {
         .menuBarExtraStyle(.window)
         SwiftUI.Settings {
             SettingsView(controller: controller).preferredColorScheme(controller.colorScheme)
+                .environment(\.locale, Locale(identifier: controller.language))
         }
     }
 }

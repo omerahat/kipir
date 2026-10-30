@@ -17,6 +17,19 @@ final class AppController: ObservableObject {
     @Published private(set) var loginMessage: String?
     @AppStorage("onboarded") var onboarded = false
 
+    var language: String {
+        UserDefaults.standard.string(forKey: "language") == "en" ? "en" : "tr"
+    }
+    func setLanguage(_ value: String) {
+        guard ["tr", "en"].contains(value), value != language else { return }
+        UserDefaults.standard.set(value, forKey: "language")
+        notifications.updateLanguage()
+        if loginMessage != nil {
+            loginMessage = L(SMAppService.mainApp.status == .requiresApproval ? "login.approval" : "login.error")
+        }
+        revision &+= 1
+    }
+
     private init() {
         let settings = store.loadSettings()
         self.settings = settings

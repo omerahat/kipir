@@ -53,3 +53,9 @@ Status separates implemented/automated evidence from human or device acceptance.
 - [ ] Publish reviewed source/cask and matching immutable v0.1.0 Release assets after explicit authorization.
 - [ ] Test downloaded Homebrew install/upgrade/uninstall and OS integrations on a separate Mac, including macOS 14 and Intel.
 - [ ] Developer ID/notarization remain outside the free preview path.
+
+## Turkish and English — 2026-10-30
+- [x] Add persistent local language picker, immediate view updates and complete English resources.
+- [x] Refresh notification action titles and local permission/error copy without changing due identity or retry policy.
+- [x] Include both languages in the Xcode app resources; check key coverage.
+- [ ] Human acceptance: switch languages in work/due/break states, reopen Settings and relaunch; check English layout, VoiceOver and new notification actions.
