@@ -18,3 +18,6 @@ Acceptance: automated tests cover all scheduler transitions and persistence edge
 
 ## Out of scope
 Other platforms, AI, accounts, sync, application tracking, productivity scores, social features, subscriptions, exercise verification and web dashboards. English strings may be added through the existing localization resources.
+
+## Exercise guidance acceptance
+Breaks present shoulder rolls, chest opening, gentle wrist stretching and supported calf raises; long breaks end with walking away. The guide supports previous/next, skip, pause/resume and early finish. The guide is embedded in the existing menu bar popover; dismissing it preserves the break. AFK never pauses the break, but sleep, meeting and manual pause do. Automated acceptance covers order, scaled durations, transitions, integration and single completion. Recognizability, VoiceOver and appearance need human acceptance; illustration is not medical or exercise-performance validation.

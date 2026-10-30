@@ -20,3 +20,6 @@ A teal rounded square with two soft stepping/motion strokes and an offset warm d
 
 ## Localization
 All user-facing strings live in Turkish `Localizable.strings` and pass through a shared localization helper (dynamic state labels too). English can be added as `en.lproj/Localizable.strings`, preserving keys and formats.
+
+## Exercise popover and motion
+The existing 330-point menu bar popover replaces its work summary with the exercise guide during breaks. It uses a teal figure card, large monospaced countdown, Turkish instruction and safety text, overall progress, and native keyboard-accessible controls. The shared header, meeting toggle and footer remain visible. There is no separate break window. Canvas draws explicit head, torso, shoulders, elbows, wrists, hips, knees and feet. A four-second cosine cycle opens arms and raises heels; small shoulder circles and hand-angle changes illustrate gentle movement. Walking alternates limbs. Reduce Motion replaces TimelineView with two labeled static key poses; paused/suspended playback is static. Wrist stretching is intentionally gentle, with an instruction to change hands halfway. Human movement accuracy and light/dark/VoiceOver acceptance remain required.

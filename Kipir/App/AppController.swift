@@ -52,6 +52,7 @@ final class AppController: ObservableObject {
         var value = settings; change(&value); settings = value.validated()
         engine.updateSettings(settings); store.save(settings); publish(save: true)
     }
+    func navigateExercise(_ offset: Int) { engine.navigateExercise(offset); publish(save: true) }
     func save() { engine.tick(); store.save(engine.checkpoint) }
     private func publish(save: Bool = false) {
         if save { store.save(engine.checkpoint); lastSave = ProcessInfo.processInfo.systemUptime }

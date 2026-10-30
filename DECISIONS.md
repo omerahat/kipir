@@ -23,3 +23,20 @@ Store the original duration alongside remaining break time. Editing future break
 
 ## 008: Count active use while a break is due
 A due reminder stays due with the same identity, but confirmed active work and daily totals continue. Accepting the break is not required to keep statistics accurate. Snooze adds its duration from the current active total.
+
+## 009: Vector exercise guide with one timing authority
+Native Canvas and TimelineView provide offline scalable movement without assets/dependencies. Visual animation has no scheduling authority. The scheduler feeds only accepted break-time deltas to the sequence, so AFK continues and sleep/unknown callback gaps freeze both. Navigation does not extend breaks; the final selected movement fills the remaining overall budget. Manual finish/last skip receives no completion credit. Closing hides the guide and leaves the countdown running. Restart reconstructs the default chronological position rather than persisting navigation history.
+
+## 010 — Guide inside the menu bar popover
+User preference supersedes the dedicated-window design. Render BreakExerciseView in MenuBarView while the scheduler phase is onBreak; retain the shared header, meeting toggle and footer. Dismissing the popover does not change timing; reopening displays the current movement. Remove BreakWindowController and its automatic window lifecycle. Revert the dataset instruction integration and use original Kıpır instructions/artwork.
+
+## 011 — Free Homebrew preview
+Use the existing omerahat/kipir repository as a tap via its explicit Git URL, with a
+root Casks/kipir.rb and universal Release ZIP on GitHub Releases. No second tap
+repository, DMG tooling, third-party dependency or automatic updater is needed.
+Scripts/package-release.sh uses ad hoc signing only through command-line overrides;
+project signing identities, sandbox and bundle ID stay unchanged. This is not
+Developer ID signing/notarization and cannot promise Gatekeeper acceptance or OS
+notification/login behavior. Never remove quarantine automatically. Pin the exact
+archive SHA-256; never overwrite an existing versioned release. Publishing is a
+separate authorized action. Uninstall preserves local data and has no zap hook.
