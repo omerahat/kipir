@@ -6,8 +6,13 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     private(set) var authorized = false
     private var visible: UUID?
     private var lastAttempted: UUID?
-    var permissionText = L("permission.unknown")
-    var errorText: String?
+    private var permissionKey = "permission.unknown"
+    private var errorKey: String?
+    private var errorDetail: String?
+    var permissionText: String { L(permissionKey) }
+    var errorText: String? {
+        errorKey.map { L($0) + (errorDetail.map { "\n" + $0 } ?? "") }
+    }
     var onChange: (() -> Void)?
     var onAction: ((UUID, SchedulerAction) -> Void)?
 
@@ -16,6 +21,9 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         lastAttempted = UserDefaults.standard.string(forKey: "lastNotificationAttempt").flatMap(UUID.init(uuidString:))
         visible = lastAttempted
         center.delegate = self
+        updateLanguage()
+    }
+    func updateLanguage() {
         let actions = [
             UNNotificationAction(identifier: "start", title: L("break.start")),
             UNNotificationAction(identifier: "snooze", title: L("snooze")),
@@ -29,16 +37,16 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         let settings = await center.notificationSettings()
         authorized = settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional
         switch settings.authorizationStatus {
-        case .authorized, .provisional: permissionText = L("permission.allowed")
-        case .denied: permissionText = L("permission.denied")
-        default: permissionText = L("permission.unknown")
+        case .authorized, .provisional: permissionKey = "permission.allowed"
+        case .denied: permissionKey = "permission.denied"
+        default: permissionKey = "permission.unknown"
         }
         onChange?()
     }
     func requestPermission() {
         Task {
             do { _ = try await center.requestAuthorization(options: [.alert, .sound]) }
-            catch { errorText = L("notification.permissionError") + "\n" + error.localizedDescription }
+            catch { errorKey = "notification.permissionError"; errorDetail = error.localizedDescription }
             await refreshPermission()
         }
     }
@@ -62,7 +70,7 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         center.add(request) { [weak self] error in
             if error != nil {
                 Task { @MainActor in
-                    self?.errorText = L("notification.deliveryError"); self?.onChange?()
+                    self?.errorKey = "notification.deliveryError"; self?.errorDetail = nil; self?.onChange?()
                 }
             }
         }

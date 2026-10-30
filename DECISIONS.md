@@ -40,3 +40,6 @@ Developer ID signing/notarization and cannot promise Gatekeeper acceptance or OS
 notification/login behavior. Never remove quarantine automatically. Pin the exact
 archive SHA-256; never overwrite an existing versioned release. Publishing is a
 separate authorized action. Uninstall preserves local data and has no zap hook.
+
+## 012 — Local interface language
+Use a separate validated `language` UserDefaults preference (`tr` / `en`, default/fallback `tr`) and the existing L helper with an explicit language bundle. Do not change the scheduler Settings payload or migrate session/statistics. Controller revision and SwiftUI locale refresh existing views immediately. Re-register notification categories without resending an existing due episode. Delivered notification bodies and OS error details are not retroactively translated. No new permission, dependency or network access.

@@ -27,6 +27,10 @@ struct SettingsView: View {
                 if let error = controller.notifications.errorText { Text(error).foregroundStyle(.red).font(.caption).textSelection(.enabled) }
             }
             Section(L("settings.general")) {
+                Picker(L("setting.language"), selection: Binding(get: { controller.language }, set: { controller.setLanguage($0) })) {
+                    Text(verbatim: "Türkçe").tag("tr")
+                    Text(verbatim: "English").tag("en")
+                }
                 Picker(L("setting.appearance"), selection: binding(\.appearance)) {
                     Text(L("appearance.system")).tag("system")
                     Text(L("appearance.light")).tag("light")

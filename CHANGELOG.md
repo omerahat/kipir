@@ -17,3 +17,6 @@ Add universal ad hoc signed Release ZIP generation, exact-checksum Homebrew cask
 and Turkish distribution/installation guidance. No scheduler, application permission,
 persistence or project signing identity changes. Not notarized; publication and
 real downloaded-install acceptance remain pending.
+
+## Unreleased — Turkish and English
+Add Settings → General → Language with Türkçe / English, persisted on this Mac and applied immediately. Translate panel, settings, exercise guidance, accessibility labels and future notifications. Preserve work, break, statistics and notification episode identity.
