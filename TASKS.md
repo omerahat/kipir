@@ -50,7 +50,7 @@ Status separates implemented/automated evidence from human or device acceptance.
 ## Homebrew preview distribution
 - [x] Native Release ZIP packaging script and generated SHA-256 cask; use existing GitHub repository as an explicit-URL tap.
 - [x] Turkish installation, update, uninstall and Gatekeeper guidance; no quarantine bypass, dependency or runtime network code.
-- [ ] Publish reviewed source/cask and matching immutable v0.1.0 Release assets after explicit authorization.
+- [x] Published immutable v0.1.0 Release assets and cask; verified the existing public GitHub release on 2026-10-31.
 - [ ] Test downloaded Homebrew install/upgrade/uninstall and OS integrations on a separate Mac, including macOS 14 and Intel.
 - [ ] Developer ID/notarization remain outside the free preview path.
 
@@ -59,3 +59,33 @@ Status separates implemented/automated evidence from human or device acceptance.
 - [x] Refresh notification action titles and local permission/error copy without changing due identity or retry policy.
 - [x] Include both languages in the Xcode app resources; check key coverage.
 - [ ] Human acceptance: switch languages in work/due/break states, reopen Settings and relaunch; check English layout, VoiceOver and new notification actions.
+
+## Exercise illustration v2
+- [x] Add original native vector artwork and five movement renderers; preserve scheduler and controls.
+- [x] Add monotonic pause-aware visual clock and regression coverage.
+- [ ] Human review of anatomical clarity, walking foot contact, wrist switching and all poses; verify motion, light/dark, Reduce Motion and VoiceOver in the running app.
+
+## Exercise visual QA — 2026-10-30
+- [x] Generate and inspect light/dark six-phase production-renderer sheets and sampled loop GIFs; correct walking foot contact and calf support hand.
+- [x] Add deterministic Meeting Mode and navigation regression coverage; run SPM and Xcode build/test.
+- [ ] Verify live popover, pause/resume, closing/reopening, sleep/wake, Reduce Motion, VoiceOver, resource usage and unknown-gap visual clock behavior.
+- [ ] Human movement review, particularly shoulder rotation, wrist anatomy, hand-switch timing and in-place walking; animation is not yet accepted as user-ready.
+
+## Quality of life — 2026-10-31
+- [x] Menu bar formatter/label through existing heartbeat, localized frozen-state symbols and ceiling rounding.
+- [x] Test notification in existing manager with refreshed authorization, separate identifier/category and submitted/error guidance.
+- [x] Atomic six-value presets and derived Custom selection; preserve break budget/snooze/cycle/totals.
+- [x] Explicit timed/indefinite meeting transitions, persisted deadline, restore/wake expiration and invalid deadline recovery.
+- [x] Independent default-off completion sound; consumable natural event and deterministic injected playback tests.
+- [x] Backward-compatible missing-field migration tests and Turkish/English resources.
+- [ ] Human/device acceptance: menu label actual width/tint, all meeting controls and preset layouts, notification appearance/actions isolation, audible Tink/mute, physical sleep/wake, keyboard/VoiceOver, and sustained CPU/energy.
+- [x] Final verification: 52 Foundation SPM tests; 55 Xcode tests; Debug and Release builds passed, plus localization/project/whitespace checks. Commands, logs and failed environment attempts are recorded in TESTING.md; human/device items above remain pending.
+
+## Notification banners — 2026-10-31
+- [x] Inspect early delegate registration/lifetime, foreground options, background OS ownership and isolated test path.
+- [x] Read all five notification settings; distinguish desktop eligibility, center-only, provisional, denied and unknown.
+- [x] Request foreground banner/list and content-dependent sound; respect system sound availability.
+- [x] Add localized warning, notification settings action with fallback/manual directions, refresh on activation and honest test submission copy.
+- [x] Deterministic settings matrix, native mapping/presentation, delegate/category retention, quiet test isolation and settings-navigation tests: 54 SPM / 61 Xcode tests passed; Debug build passed.
+- [ ] Live checks: Banners enabled, alert style None, Focus enabled, Settings foreground test and background test; actual on-screen appearance remains unverified.
+- [x] Final banner-fix Release build and localization/whitespace checks passed. Detailed command results and six manual acceptance procedures are in TESTING.md.

@@ -20,3 +20,25 @@ real downloaded-install acceptance remain pending.
 
 ## Unreleased — Turkish and English
 Add Settings → General → Language with Türkçe / English, persisted on this Mac and applied immediately. Translate panel, settings, exercise guidance, accessibility labels and future notifications. Preserve work, break, statistics and notification episode identity.
+
+## Unreleased — Exercise illustrations v2
+Replace stick figures with original native Canvas illustrations and movement-specific poses. A monotonic visual clock freezes on pause and does not control break timing.
+
+Exercise illustration refinement: adjust shoulder range, use a side-view in-place step with a stationary supporting shoe, keep the calf-raise support hand anchored and improve dark-appearance clothing contrast. Human movement and live UI acceptance remain pending.
+
+## 2026-10-31 — Quality of life
+- Added live localized menu bar minutes and distinct frozen-state indicators.
+- Added isolated, authorization-refreshed test notifications and honest submission guidance.
+- Added derived Quick Focus/Balanced/Custom timing selection without session resets.
+- Added persisted 15/30/60-minute Meeting Mode with early end, replacement and conservative wake/restore expiration.
+- Added independent default-off natural break completion sound, using native quiet Tink exactly once per consumed event.
+- Preserved legacy settings/checkpoints, existing exercise artwork/playback, AFK rules, short/long cycles and daily totals. Added deterministic lifecycle, migration, formatting, preset and feedback coverage; device acceptance is tracked in TESTING.md.
+
+## 2026-10-31 — Notification banner visibility
+- Separate notification authorization/submission from actual desktop-alert eligibility, including provisional quiet permission and Notification Center/sound settings.
+- Request banner and list in foreground, sound only when configured in the content and permitted by system settings.
+- Add Turkish/English visibility warnings and a best-effort notification settings opener with fallback; refresh when returning to Settings.
+- Test results report accepted requests, never confirmed visible banners. Preserve scheduler, daily statistics, reminder UUIDs and cancellation guards.
+
+## 0.1.1 — 2026-10-31
+Release build 2 packages the quality-of-life features, updated native exercise artwork and notification visibility guidance above. Universal ad hoc preview; existing user settings/checkpoints remain compatible. Homebrew cask pins the new immutable archive SHA-256. Version/build metadata now comes from Config.xcconfig for both Info.plist fields.

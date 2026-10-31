@@ -9,6 +9,7 @@ struct Settings: Codable, Equatable {
     var snooze: TimeInterval = 10 * 60
     var notifications = true
     var sound = false
+    var breakEndSound = false
     var appearance = "system"
 
     func validated() -> Settings {
@@ -47,6 +48,7 @@ struct Checkpoint: Codable {
     var isLongBreak = false
     var paused = false
     var meeting = false
+    var meetingDeadline: Date?
     var snoozed = false
     var dueID: UUID?
     var today: DailyStats
@@ -108,5 +110,65 @@ struct ExerciseSequenceController {
     }
     mutating func navigate(_ offset: Int) {
         index = min(exercises.count - 1, max(0, index + offset)); elapsed = 0
+    }
+}
+
+// Visual playback owns no timer and never updates the scheduler.
+struct ExerciseVisualClock {
+    private(set) var offset: Double
+    private(set) var anchor: Double
+    private(set) var running: Bool
+
+    func time(at now: Double) -> Double {
+        offset + (running ? max(0, now - anchor) : 0)
+    }
+    mutating func setRunning(_ value: Bool, at now: Double) {
+        offset = time(at: now)
+        anchor = now
+        running = value
+    }
+}
+
+// Missing deadline means legacy indefinite mode; a malformed new field must not wipe a session.
+extension Checkpoint {
+    private enum CodingKeys: String, CodingKey {
+        case activeWork, target, phase, breakRemaining, breakDuration, completedShorts, isLongBreak
+        case paused, meeting, meetingDeadline, snoozed, dueID, today
+    }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        activeWork = try c.decode(Double.self, forKey: .activeWork)
+        target = try c.decode(Double.self, forKey: .target)
+        phase = try c.decode(Phase.self, forKey: .phase)
+        breakRemaining = try c.decode(Double.self, forKey: .breakRemaining)
+        breakDuration = try c.decode(Double.self, forKey: .breakDuration)
+        completedShorts = try c.decode(Int.self, forKey: .completedShorts)
+        isLongBreak = try c.decode(Bool.self, forKey: .isLongBreak)
+        paused = try c.decode(Bool.self, forKey: .paused)
+        meeting = try c.decode(Bool.self, forKey: .meeting)
+        snoozed = try c.decode(Bool.self, forKey: .snoozed)
+        dueID = try c.decodeIfPresent(UUID.self, forKey: .dueID)
+        today = try c.decode(DailyStats.self, forKey: .today)
+        do { meetingDeadline = try c.decodeIfPresent(Date.self, forKey: .meetingDeadline) }
+        catch { meetingDeadline = nil; meeting = false }
+    }
+}
+
+extension Settings {
+    private enum CodingKeys: String, CodingKey {
+        case work, shortBreak, longBreak, longEvery, afk, snooze, notifications, sound, breakEndSound, appearance
+    }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        work = try c.decode(Double.self, forKey: .work)
+        shortBreak = try c.decode(Double.self, forKey: .shortBreak)
+        longBreak = try c.decode(Double.self, forKey: .longBreak)
+        longEvery = try c.decode(Int.self, forKey: .longEvery)
+        afk = try c.decode(Double.self, forKey: .afk)
+        snooze = try c.decode(Double.self, forKey: .snooze)
+        notifications = try c.decode(Bool.self, forKey: .notifications)
+        sound = try c.decode(Bool.self, forKey: .sound)
+        appearance = try c.decode(String.self, forKey: .appearance)
+        breakEndSound = (try? c.decodeIfPresent(Bool.self, forKey: .breakEndSound)) ?? false
     }
 }

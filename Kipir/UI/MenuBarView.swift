@@ -77,9 +77,27 @@ struct MenuBarView: View {
                     }
                 }.padding(14).background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 14))
             }
-            Toggle(isOn: Binding(get: { engine.meeting }, set: { _ in controller.perform(.toggleMeeting) })) {
-                Label(L("meeting"), systemImage: "person.2")
-            }.toggleStyle(.switch)
+            HStack {
+                Toggle(isOn: Binding(get: { engine.meeting }, set: { controller.setMeeting($0) })) {
+                    Label(L("meeting"), systemImage: "person.2")
+                }.toggleStyle(.switch)
+                Menu {
+                    ForEach([15, 30, 60], id: \.self) { minutes in
+                        Button(String(format: L("menubar.minutes"), minutes)) { controller.setMeeting(true, minutes: minutes) }
+                    }
+                    Button(L("meeting.indefinite")) { controller.setMeeting(true) }
+                } label: { Image(systemName: "clock").accessibilityLabel(L("meeting.duration")) }
+                .menuStyle(.borderlessButton).fixedSize()
+            }
+            if engine.meeting {
+                HStack {
+                    if let remaining = engine.meetingRemaining {
+                        Text(String(format: L("meeting.remaining"), MenuBarStatusFormatter(status: .meeting, remaining: remaining).minutes))
+                    } else { Text(L("meeting.indefinite")) }
+                    Spacer()
+                    Button(L("meeting.end")) { controller.setMeeting(false) }
+                }.font(.caption)
+            }
             Divider()
             HStack {
                 SettingsLink { Label(L("settings"), systemImage: "gearshape") }
@@ -101,72 +119,6 @@ struct MenuBarView: View {
     }
 }
 
-struct ExerciseFigureView: View {
-    let movement: ExerciseDefinition.Movement
-    let frozen: Bool
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    var body: some View {
-        if reduceMotion {
-            HStack {
-                figure(phase: 0).overlay(alignment: .bottom) { Text(L("pose.start")).font(.caption) }
-                figure(phase: movement == .shoulders || movement == .walk ? .pi / 2 : .pi).overlay(alignment: .bottom) { Text(L("pose.end")).font(.caption) }
-            }.accessibilityLabel(L("exercise." + movement.rawValue + ".instruction"))
-        } else {
-            TimelineView(.animation(minimumInterval: 1 / 30, paused: frozen)) { context in
-                figure(phase: frozen ? 0 : context.date.timeIntervalSinceReferenceDate * .pi / 2)
-            }.accessibilityLabel(L("exercise." + movement.rawValue + ".instruction"))
-        }
-    }
-    private func figure(phase: Double) -> some View {
-        Canvas { context, size in
-            let scale = min(size.width / 240, size.height / 290)
-            let origin = CGPoint(x: (size.width - 240 * scale) / 2, y: (size.height - 290 * scale) / 2)
-            func point(_ x: Double, _ y: Double) -> CGPoint { CGPoint(x: origin.x + x * scale, y: origin.y + y * scale) }
-            let wave = (1 - cos(phase)) / 2
-            let lift = movement == .calves ? 12 * wave : 0
-            let shoulder = movement == .shoulders ? 7 * sin(phase) : 0
-            let sway = movement == .walk ? sin(phase) * 12 : 0
-            let leftStep = movement == .walk ? max(0, sin(phase)) * 16 : 0
-            let rightStep = movement == .walk ? max(0, -sin(phase)) * 16 : 0
-            func line(_ coordinates: [(Double, Double)], color: Color = .primary, width: Double = 9) {
-                var path = Path()
-                for (i, p) in coordinates.enumerated() {
-                    if i == 0 { path.move(to: point(p.0, p.1)) } else { path.addLine(to: point(p.0, p.1)) }
-                }
-                context.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: width * scale, lineCap: .round, lineJoin: .round))
-            }
-            // Front-facing simplified skeleton; elbow and wrist positions are explicit for each movement.
-            context.fill(Path(ellipseIn: CGRect(x: point(104, 25 - lift).x, y: point(104, 25 - lift).y, width: 32 * scale, height: 36 * scale)), with: .color(.primary))
-            line([(120, 70 - lift), (120, 160 - lift)])
-            line([(91, 86 - lift + shoulder), (120, 80 - lift), (149, 86 - lift + shoulder)], color: .teal)
-            switch movement {
-            case .shoulders:
-                for side in [-1.0, 1.0] {
-                    let x = 120 + side * (30 + 4 * cos(phase))
-                    line([(x, 86 + shoulder), (x + side * 8, 120 + shoulder), (x + side * 3, 151 + shoulder)], color: .teal)
-                }
-            case .chest:
-                for side in [-1.0, 1.0] {
-                    line([(120 + side * 29, 86), (120 + side * (38 + 23 * wave), 116 - 22 * wave), (120 + side * (18 + 73 * wave), 140 - 47 * wave)], color: .teal)
-                }
-            case .wrists:
-                line([(91, 86), (74, 118), (124, 118)], color: .teal)
-                line([(149, 86), (159, 118), (126, 118)], color: .teal)
-                line([(124, 118), (124 + 8 * wave, 96)], color: .orange, width: 6)
-                line([(126, 118), (133, 104)], color: .orange, width: 5)
-            case .calves, .walk:
-                line([(91, 86 - lift), (80 + sway, 123 - lift), (88 + sway, 152 - lift)], color: .teal)
-                line([(149, 86 - lift), (160 - sway, 123 - lift), (152 - sway, 152 - lift)], color: .teal)
-            }
-            line([(120, 160 - lift), (100 + sway, 204 - lift - leftStep), (98 + sway, 249 - lift - leftStep)])
-            line([(120, 160 - lift), (140 - sway, 204 - lift - rightStep), (142 - sway, 249 - lift - rightStep)])
-            line([(98 + sway, 249 - lift - leftStep), (82 + sway, 252 - leftStep)])
-            line([(142 - sway, 249 - lift - rightStep), (158 - sway, 252 - rightStep)])
-            line([(62, 260), (178, 260)], color: .secondary.opacity(0.3), width: 2)
-        }.accessibilityHidden(true)
-    }
-}
-
 struct BreakExerciseView: View {
     @ObservedObject var controller: AppController
     var body: some View {
@@ -177,7 +129,8 @@ struct BreakExerciseView: View {
                     Spacer()
                     Text("\(sequence.index + 1) / \(sequence.exercises.count)").foregroundStyle(.secondary)
                 }
-                ExerciseFigureView(movement: sequence.current.id, frozen: controller.engine.status != .onBreak)
+                ExerciseAnimationView(movement: sequence.current.id, elapsed: sequence.elapsed, duration: sequence.current.duration, frozen: controller.engine.status != .onBreak)
+                    .id(sequence.current.id)
                     .frame(height: 180).padding(8)
                     .background(.teal.opacity(0.08), in: RoundedRectangle(cornerRadius: 18))
                 Text(L(sequence.current.instructionKey)).multilineTextAlignment(.center).frame(minHeight: 42)

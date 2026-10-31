@@ -9,6 +9,7 @@ final class BreakScheduler {
     private var previousTime: TimeInterval?
     private var previousIdle: TimeInterval?
     private var pending: TimeInterval = 0
+    private var naturalCompletionSound: Bool?
     private(set) var suspended = false
     var reminderID: UUID? {
         saved.phase == .due && !paused && !meeting && !suspended ? saved.dueID : nil
@@ -25,6 +26,7 @@ final class BreakScheduler {
             Checkpoint(target: self.settings.work, today: DailyStats(day: Calendar.current.startOfDay(for: date())))
         if saved.phase == .onBreak { exercises = ExerciseSequenceController(long: saved.isLongBreak, duration: saved.breakDuration, elapsed: saved.breakDuration - saved.breakRemaining) }
         rollover()
+        reconcileMeeting()
         baseline()
         refreshReminder()
     }
@@ -36,6 +38,9 @@ final class BreakScheduler {
     var nextBreakIsLong: Bool { saved.completedShorts >= settings.longEvery }
     var paused: Bool { saved.paused }
     var meeting: Bool { saved.meeting }
+    var meetingRemaining: TimeInterval? {
+        saved.meetingDeadline.map { max(0, $0.timeIntervalSince(date())) }
+    }
     var remaining: TimeInterval {
         saved.phase == .onBreak ? saved.breakRemaining : max(0, saved.target - saved.activeWork)
     }
@@ -60,6 +65,8 @@ final class BreakScheduler {
         let t = now(), i = idle()
         let changedDay = rollover()
         defer { refreshReminder() }
+        // Expiration resumes only from a fresh baseline, never credits the frozen crossing sample.
+        if reconcileMeeting() { baseline(); return }
         guard t.isFinite, i.isFinite, i >= 0 else {
             pending = 0; previousTime = nil; previousIdle = nil; isIdle = true; return
         }
@@ -75,6 +82,7 @@ final class BreakScheduler {
             exercises?.advance(min(delta, saved.breakRemaining))
             saved.breakRemaining = max(0, saved.breakRemaining - delta)
             if saved.breakRemaining == 0 {
+                naturalCompletionSound = settings.breakEndSound
                 saved.today.breaks += 1
                 saved.completedShorts = saved.isLongBreak ? 0 : min(10, saved.completedShorts + 1)
                 resetInterval()
@@ -109,18 +117,48 @@ final class BreakScheduler {
             saved.target = saved.activeWork + settings.snooze
             saved.snoozed = true; saved.phase = .working
         case .skip:
+            naturalCompletionSound = nil
             guard saved.phase == .due || saved.phase == .onBreak else { return }
             resetInterval()
-        case .togglePause: saved.paused.toggle()
-        case .toggleMeeting: saved.meeting.toggle()
+        case .togglePause: naturalCompletionSound = nil; saved.paused.toggle()
+        case .toggleMeeting: naturalCompletionSound = nil; saved.meeting.toggle(); saved.meetingDeadline = nil
         case .reset:
-            resetInterval(); saved.completedShorts = 0; saved.paused = false; saved.meeting = false
+            naturalCompletionSound = nil
+            resetInterval(); saved.completedShorts = 0; saved.paused = false; saved.meeting = false; saved.meetingDeadline = nil
         }
         baseline(); refreshReminder()
     }
 
+    // Ephemeral event: nil means no completion; Bool captures the preference at completion.
+    func consumeBreakCompletion() -> Bool? {
+        defer { naturalCompletionSound = nil }
+        return naturalCompletionSound
+    }
+
+    func setMeeting(_ enabled: Bool, duration: TimeInterval? = nil) {
+        if let duration, ![900.0, 1800, 3600].contains(duration) { return }
+        tick()
+        if enabled { naturalCompletionSound = nil }
+        saved.meeting = enabled
+        saved.meetingDeadline = enabled ? duration.map { date().addingTimeInterval($0) } : nil
+        reconcileMeeting()
+        baseline(); refreshReminder()
+    }
+
+    @discardableResult private func reconcileMeeting() -> Bool {
+        guard saved.meeting else { saved.meetingDeadline = nil; return false }
+        guard let deadline = saved.meetingDeadline else { return false }
+        let remaining = deadline.timeIntervalSince(date())
+        // A backward clock jump beyond the supported one-hour horizon cancels timed mode.
+        guard remaining.isFinite, remaining > 0, remaining <= 3600 else {
+            saved.meeting = false; saved.meetingDeadline = nil; pending = 0; return true
+        }
+        return false
+    }
+
     func setSuspended(_ value: Bool) {
-        if value { tick() }
+        tick()
+        if value { naturalCompletionSound = nil }
         suspended = value; baseline(); refreshReminder()
     }
 

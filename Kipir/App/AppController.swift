@@ -10,6 +10,7 @@ final class AppController: ObservableObject {
     private let store = LocalStore()
     private let activity = ActivityMonitor()
     private var heartbeat: Timer?
+    private let breakSound = NSSound(named: "Tink")
     private var lastSave: TimeInterval = 0
     @Published private(set) var revision = 0
     @Published private(set) var settings: Settings
@@ -44,7 +45,7 @@ final class AppController: ObservableObject {
             guard let self, self.engine.reminderID == id else { return }
             self.perform(action)
         }
-        notifications.onChange = { [weak self] in self?.publish() }
+        notifications.onChange = { [weak self] in self?.revision &+= 1 }
         refreshLogin()
         let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
@@ -56,21 +57,33 @@ final class AppController: ObservableObject {
     }
     func tick() {
         let oldPhase = engine.checkpoint.phase
+        let oldMeeting = engine.meeting
         engine.tick()
         let now = ProcessInfo.processInfo.systemUptime
-        publish(save: oldPhase != engine.checkpoint.phase || now - lastSave >= 15)
+        publish(save: oldPhase != engine.checkpoint.phase || oldMeeting != engine.meeting || now - lastSave >= 15)
     }
     func perform(_ action: SchedulerAction) { engine.perform(action); publish(save: true) }
     func changeSettings(_ change: (inout Settings) -> Void) {
         var value = settings; change(&value); settings = value.validated()
         engine.updateSettings(settings); store.save(settings); publish(save: true)
     }
+    func setMeeting(_ enabled: Bool, minutes: Int? = nil) {
+        engine.setMeeting(enabled, duration: minutes.map { Double($0) * 60 })
+        publish(save: true)
+    }
     func navigateExercise(_ offset: Int) { engine.navigateExercise(offset); publish(save: true) }
-    func save() { engine.tick(); store.save(engine.checkpoint) }
+    func save() { engine.tick(); publish(save: true) }
     private func publish(save: Bool = false) {
+        BreakCompletionFeedback.consume(from: engine) {
+            breakSound?.volume = 0.25
+            breakSound?.play()
+        }
         if save { store.save(engine.checkpoint); lastSave = ProcessInfo.processInfo.systemUptime }
         notifications.sync(engine: engine)
         revision &+= 1
+    }
+    func testNotification() {
+        Task { await notifications.testNotification(enabled: { self.settings.notifications }, sound: settings.sound) }
     }
     func refreshSystemSettings() {
         refreshLogin()

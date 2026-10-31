@@ -14,8 +14,7 @@ Requires macOS 14+, Xcode with macOS SDK and Swift 5.9+. Open `Kipir.xcodeproj`,
 
 ## Homebrew distribution (free preview)
 
-Packaging is ready; the commands below will not work until the first GitHub Release and cask are published.
-After publication, on macOS 14+:
+On macOS 14+:
 
 ```sh
 brew tap omerahat/kipir https://github.com/omerahat/kipir.git
@@ -50,3 +49,16 @@ Repository identity: `kipir-macos` (this local checkout may use a shorter folder
 
 ## Animated movement guide
 Starting a break displays guidance directly in the menu bar popover with instructions in the selected language, a joint-based animated figure, per-movement countdown, overall progress and keyboard controls (left/right, Space). Short breaks use four 30-second movements; long breaks add a three-minute walk. Custom break durations scale the sequence proportionally. Dismiss the popover to continue away from the screen; click the menu bar icon to return. Move gently and stop if uncomfortable.
+
+## Everyday controls
+The menu bar shows ceiling-rounded remaining minutes, or a localized break/meeting state. Idle keeps the frozen remaining time with a moon symbol; manual pause and system suspension have distinct symbols. All updates use the existing heartbeat.
+
+Settings → Timing offers Quick Focus (25/1/5 minutes, long after 3 short breaks, 90-second AFK, 5-minute active snooze), Balanced (45/2/5, 3, 90 seconds, 10-minute snooze), and derived Custom status. Applying a preset keeps current break duration, today's totals and an existing snooze target.
+
+Use the clock menu beside Meeting Mode for 15, 30 or 60 wall-clock minutes, or indefinite mode. The toggle still enables indefinite mode; End meeting clears the deadline. A timed meeting expires on the next heartbeat or wake/restoration, preserving manual pause and underlying progress, without sleep/offline credit.
+
+Settings → Notifications → Test Notification refreshes authorization and submits a separate local notification. It never requests permission automatically or changes a session. Accepted submission does not prove visible delivery: Focus and macOS settings can suppress it. Enable notifications in Kıpır and explicitly grant system permission before testing.
+
+Break completion sound is a separate Timing preference, off by default. Natural completion plays the native Tink sound quietly once; skip, early finish, reset, frozen time and restoration do not play it. Notification sound remains independent. System output volume/mute still applies.
+
+Notification authorization does not guarantee desktop banners. Settings → Notifications now distinguishes Banners/Alerts enabled, Notification Center only, provisional quiet authorization, denied and not determined. Open Notification Settings opens the macOS pane on a best-effort basis, falling back to System Settings with manual navigation guidance. Enable Banners or Alerts yourself; Kıpır never changes those preferences or bypasses Focus. Test results confirm request acceptance only, including when Settings is foreground.
