@@ -43,3 +43,21 @@ separate authorized action. Uninstall preserves local data and has no zap hook.
 
 ## 012 — Local interface language
 Use a separate validated `language` UserDefaults preference (`tr` / `en`, default/fallback `tr`) and the existing L helper with an explicit language bundle. Do not change the scheduler Settings payload or migrate session/statistics. Controller revision and SwiftUI locale refresh existing views immediately. Re-register notification categories without resending an existing due episode. Delivered notification bodies and OS error details are not retroactively translated. No new permission, dependency or network access.
+
+## 013 — Native exercise illustrations
+Use native SwiftUI Canvas with original programmatic artwork and a four-second loop; no external runtime, assets, permissions or network. Separate drawing from the popover, keep a monotonic visual-only clock, and retain the existing scheduler as the sole timing authority. The wrist close-up mirrors after halfway. Original poses are implementation evidence, not exercise or medical validation; human review remains required.
+
+## 014 — Exercise visual QA
+Inspect deterministic samples rendered from production Canvas code in both appearances. The walking illustration now uses a side-view in-place step with a fixed supporting foot; the supported calf raise keeps its hand on the support. The samples do not replace live playback or human movement review. No third-party runtime or asset is introduced.
+
+## 015 — Five lightweight quality-of-life additions
+Reuse the existing heartbeat, settings transaction, checkpoint keys and native UI. Presets are derived from all six timing values, not separately stored. The menu formatter is a pure presentation helper; AFK and overrides do not advance the displayed work countdown.
+
+Use a native-delivery seam inside the existing NotificationManager to verify test-request construction and isolation without OS delivery. Test UI invalidation does not synchronize real reminders; the normal heartbeat continues doing so. Test identifiers cannot parse as a real reminder UUID and have no break category/actions. Accepted requests are described as submitted only.
+
+Persist meeting expiration as optional Date and use explicit idempotent setters. Do not credit the expiration-crossing sample; retaining at most one second less work is safer than crediting frozen time. Missing deadlines mean old indefinite mode; malformed deadlines clear only the override. Expired/nonfinite/>60-minute future deadlines cancel timed mode, preserving the session. Absolute clock adjustments affect expiration as documented in ARCHITECTURE; local timezone/DST labels do not.
+
+Completion feedback uses a nonpersistent single-consumption natural event. Capture the sound preference when completing and recheck it when consuming, so enabling later cannot replay an old disabled completion. Manual cancellation/override transitions suppress pending feedback. Use quiet native Tink rather than add an audio asset or library. Audio quality/volume and mute need human device review.
+
+## 016 — Separate notification acceptance from desktop presentation
+Preserve real reminder episodes and the one-attempt policy while reading authorization, alerts/style, Notification Center and sound as separate capabilities. Provisional permits quiet submission but never qualifies as a desktop banner. Foreground requests banner+list, with sound only when the request carries sound. System settings and Focus remain authoritative; do not add overlays, critical alerts or modify preferences. Open settings through NSWorkspace, treating pane URLs as best effort with an application/manual fallback. Visible UI is not inferred from an accepted request.

@@ -18,7 +18,7 @@ if [[ -e "$archive" ]]; then
 fi
 mkdir -p dist Casks build
 xcodebuild -project Kipir.xcodeproj -scheme Kipir -configuration Release \
-  -derivedDataPath build ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
+  -derivedDataPath build COMPILER_INDEX_STORE_ENABLE=NO ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
   CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual CODE_SIGNING_ALLOWED=YES \
   build > build/package-release.log 2>&1
 app="build/Build/Products/Release/Kipir.app"

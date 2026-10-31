@@ -46,7 +46,7 @@
 "setting.sound" = "Bildirim sesi";
 "permission.request" = "Bildirim izni iste";
 "permission.unknown" = "Bildirim izni henüz verilmedi. İzin vermeden de Kıpır’ı kullanabilirsin.";
-"permission.allowed" = "Bildirim izni açık. Odak ve macOS ayarları gösterimi etkileyebilir.";
+"permission.allowed" = "Ekran bildirimleri açık. Odak ve macOS ayarları afişlerin görünmesini yine de engelleyebilir.";
 "permission.denied" = "Bildirim izni kapalı. Sistem Ayarları → Bildirimler → Kıpır bölümünden açabilirsin. Mola panelde görünmeye devam eder.";
 "notification.title" = "Kıpır zamanı!";
 "notification.short" = "Biraz ayağa kalk, omuzlarını hareket ettir ve kısa bir yürüyüş yap.";
@@ -82,3 +82,35 @@
 "pose.end" = "Hareket";
 
 "setting.language" = "Dil";
+
+"menubar.minutes" = "%d dk";
+"menubar.due" = "Mola";
+"menubar.break" = "Mola %d dk";
+"menubar.meeting" = "Toplantı";
+"menubar.suspended" = "Beklemede";
+"notification.test.button" = "Bildirimi dene";
+"notification.test.title" = "Kıpır bildirim testi";
+"notification.test.body" = "Bu bir Kıpır test bildirimidir. Mola zamanı geldiğinde burada haber vereceğiz.";
+"notification.test.submitted" = "Test isteği macOS tarafından kabul edildi. Bu, afişin ekranda göründüğünü doğrulamaz; Odak ve sistem ayarları gösterimi engelleyebilir.";
+"notification.test.disabled" = "Bildirimler Kıpır ayarlarında kapalı. Test için önce açın.";
+"notification.test.failed" = "Test gönderilemedi. Sistem Ayarları → Bildirimler → Kıpır bölümünü kontrol edip yeniden deneyin.";
+"preset.title" = "Süre profili";
+"preset.quick" = "Kısa Odak";
+"preset.balanced" = "Dengeli";
+"preset.custom" = "Özel";
+"meeting.indefinite" = "Elle kapatana kadar";
+"meeting.duration" = "Toplantı süresi";
+"meeting.remaining" = "%d dk kaldı";
+"meeting.end" = "Toplantıyı bitir";
+"setting.breakEndSound" = "Mola bitiş sesi";
+"permission.centerOnly" = "Bildirimler yalnızca Bildirim Merkezi'nde görünüyor. Ekranda görünmeleri için Sistem Ayarları → Bildirimler → Kıpır bölümünden Afişler veya Uyarılar seçeneğini aç.";
+"permission.alertsDisabled" = "Ekran uyarıları ve Bildirim Merkezi teslimi kapalı. Sistem Ayarları → Bildirimler → Kıpır bölümünden Afişler veya Uyarılar seçeneğini aç.";
+"permission.quiet" = "Bildirim izni geçici ve sessiz teslim için verilmiş. Ekranda görünmeleri için Sistem Ayarları → Bildirimler → Kıpır bölümünden Afişler veya Uyarılar seçeneğini aç.";
+"notification.settings.open" = "Bildirim Ayarlarını Aç";
+"notification.settings.guidance" = "Doğru sayfa açılmadıysa Sistem Ayarları → Bildirimler → Kıpır yolunu izle; Afişler veya Uyarılar seçeneğini aç. Odak ayarlarını da kontrol et.";
+"notification.settings.failed" = "Sistem Ayarları açılamadı. Apple menüsünden Sistem Ayarları → Bildirimler → Kıpır yolunu izleyip Afişler veya Uyarılar seçeneğini aç.";
+"notification.center.enabled" = "Bildirim Merkezi: açık";
+"notification.center.disabled" = "Bildirim Merkezi: kapalı veya kullanılamıyor";
+"notification.sound.enabled" = "Sistem bildirim sesi: açık";
+"notification.sound.disabled" = "Sistem bildirim sesi: kapalı veya kullanılamıyor";
+"notification.test.submittedQuiet" = "Test isteği macOS tarafından kabul edildi; ekran uyarıları açık değil veya izin sessiz. Bildirim ayarlarını kontrol et. Bu sonuç görünür teslimi doğrulamaz.";
