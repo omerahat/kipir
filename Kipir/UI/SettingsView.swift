@@ -85,6 +85,10 @@ struct SettingsView: View {
                 }
             }
             Text(L("ui.naturalBreak.note")).font(.caption).foregroundStyle(.secondary)
+            if controller.settings.naturalBreakIsRaised {
+                Text(String(format: L("ui.naturalBreak.effective"), controller.settings.effectiveNaturalBreakMinutes))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Picker(L("ui.focus.title"), selection: binding(\.exerciseFocus)) {
                 Text(L("ui.focus.all")).tag(ExerciseFocus.all.rawValue)
                 Text(L("ui.focus.neckShoulders")).tag(ExerciseFocus.neckShoulders.rawValue)

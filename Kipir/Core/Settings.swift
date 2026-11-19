@@ -22,6 +22,20 @@ struct Settings: Codable, Equatable {
 
     static let naturalBreakOptions: [TimeInterval] = [0, 300, 600, 900]
 
+    /// Verified away span that actually restarts the work interval: the selection, but always at least one
+    /// minute beyond the AFK threshold (DECISIONS 018). Zero when natural break is off. Shared by the
+    /// scheduler and the UI so the rule is stated once.
+    var effectiveNaturalBreak: TimeInterval {
+        naturalBreak > 0 ? max(naturalBreak, afk + 60) : 0
+    }
+    /// The AFK threshold forces a longer span than the selection.
+    var naturalBreakIsRaised: Bool { naturalBreak > 0 && effectiveNaturalBreak > naturalBreak }
+    /// Whole minutes (rounded up) of `effectiveNaturalBreak` for display.
+    var effectiveNaturalBreakMinutes: Int {
+        let value = effectiveNaturalBreak
+        return value.isFinite ? Int(min(Double(Int.max / 2), ceil(value / 60))) : 0
+    }
+
     func validated() -> Settings {
         var s = self
         func valid(_ value: Double, _ range: ClosedRange<Double>, _ fallback: Double) -> Double {
@@ -70,6 +84,9 @@ struct Checkpoint: Codable {
     var exerciseRotation = 0
     /// `ExerciseFocus` raw value captured when the current break started.
     var breakFocus: String?
+    /// True while the last observed wall date lay outside the working window. A restored checkpoint with this
+    /// flag that now lies inside the window is a genuine out-to-in transition (DECISIONS 025).
+    var wasOffHours = false
 
     var isValid: Bool {
         activeWork.isFinite && (0...1_000_000_000).contains(activeWork) &&
@@ -78,8 +95,7 @@ struct Checkpoint: Codable {
         breakDuration.isFinite && (10...3600).contains(breakDuration) && breakRemaining <= breakDuration &&
         (0...10).contains(completedShorts) && today.day.timeIntervalSince1970.isFinite &&
         today.activeSeconds.isFinite && (0...172800).contains(today.activeSeconds) &&
-        (0...10000).contains(today.breaks) && (phase != .onBreak || breakRemaining > 0) &&
-        (0...1_000_000).contains(exerciseRotation)
+        (0...10000).contains(today.breaks) && (phase != .onBreak || breakRemaining > 0)
     }
 }
 
@@ -93,7 +109,7 @@ struct NotificationPolicy {
 extension Checkpoint {
     private enum CodingKeys: String, CodingKey {
         case activeWork, target, phase, breakRemaining, breakDuration, completedShorts, isLongBreak
-        case paused, meeting, meetingDeadline, snoozed, dueID, today, exerciseRotation, breakFocus
+        case paused, meeting, meetingDeadline, snoozed, dueID, today, exerciseRotation, breakFocus, wasOffHours
     }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -111,7 +127,10 @@ extension Checkpoint {
         today = try c.decode(DailyStats.self, forKey: .today)
         do { meetingDeadline = try c.decodeIfPresent(Date.self, forKey: .meetingDeadline) }
         catch { meetingDeadline = nil; meeting = false }
-        exerciseRotation = (try? c.decodeIfPresent(Int.self, forKey: .exerciseRotation)) ?? 0
+        // A malformed or out-of-range rotation never invalidates the session; it is clamped.
+        let rotation = (try? c.decodeIfPresent(Int.self, forKey: .exerciseRotation)) ?? 0
+        exerciseRotation = min(1_000_000, max(0, rotation))
+        wasOffHours = (try? c.decodeIfPresent(Bool.self, forKey: .wasOffHours)) ?? false
         breakFocus = (try? c.decodeIfPresent(String.self, forKey: .breakFocus)) ?? nil
     }
 }

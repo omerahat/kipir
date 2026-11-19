@@ -48,15 +48,52 @@ final class PresentationTests: XCTestCase {
 
     // MARK: Notices
 
-    func testNoticeExpiresAfterSixSecondsOfMonotonicTime() {
-        let notice = TransientNotice(.breakCompleted(today: 3), now: 100)
+    func testNoticeExpiresSixSecondsAfterItWasDisplayed() {
+        let notice = try! XCTUnwrap(TransientNotice(.breakCompleted(today: 3), now: 100).markingDisplayed(at: 100))
         XCTAssertTrue(notice.isVisible(at: 100)); XCTAssertTrue(notice.isVisible(at: 105.9))
         XCTAssertFalse(notice.isVisible(at: 106)); XCTAssertFalse(notice.isVisible(at: .nan))
         XCTAssertEqual(notice.count, 3); XCTAssertEqual(notice.textKey, "ui.notice.breakCompleted")
         let none = BreakCompletionFeedback.Outcome()
         XCTAssertEqual(TransientNotice.next(current: notice, outcome: none, todayBreaks: 3, now: 104), notice)
         XCTAssertNil(TransientNotice.next(current: notice, outcome: none, todayBreaks: 3, now: 106))
-        XCTAssertNil(TransientNotice.next(current: nil, outcome: none, todayBreaks: 3, now: 0))
+        XCTAssertNil(TransientNotice.next(current: nil, outcome: none, todayBreaks: 0, now: 0))
+    }
+
+    func testUnseenNoticeStaysPendingForFifteenMinutesThenExpires() {
+        let none = BreakCompletionFeedback.Outcome()
+        let notice = TransientNotice(.naturalBreak, now: 100)
+        XCTAssertTrue(notice.isPending)
+        XCTAssertTrue(notice.isVisible(at: 106), "the old 6 s window no longer applies while unseen")
+        XCTAssertEqual(TransientNotice.next(current: notice, outcome: none, todayBreaks: 0, now: 700), notice)
+        XCTAssertTrue(notice.isVisible(at: 999.9)); XCTAssertFalse(notice.isVisible(at: 1000))
+        XCTAssertNil(TransientNotice.next(current: notice, outcome: none, todayBreaks: 0, now: 1000))
+        XCTAssertNil(notice.markingDisplayed(at: 1000), "an expired pending notice cannot be displayed")
+    }
+
+    func testDisplayStartsTheSixSecondLifetimeOnceAndIsIdempotent() throws {
+        let none = BreakCompletionFeedback.Outcome()
+        let pending = TransientNotice(.breakCompleted(today: 1), now: 100)
+        let shown = try XCTUnwrap(pending.markingDisplayed(at: 700))
+        XCTAssertFalse(shown.isPending); XCTAssertEqual(shown.postedAt, 100)
+        XCTAssertTrue(shown.isVisible(at: 705.9)); XCTAssertFalse(shown.isVisible(at: 706))
+        XCTAssertEqual(shown.markingDisplayed(at: 704), shown, "a second display does not extend the lifetime")
+        XCTAssertEqual(TransientNotice.next(current: shown, outcome: none, todayBreaks: 1, now: 705), shown)
+        XCTAssertNil(TransientNotice.next(current: shown, outcome: none, todayBreaks: 1, now: 706))
+        XCTAssertNil(shown.markingDisplayed(at: 710), "an expired notice is not revived by a later display")
+        // A notice displayed just before the pending limit still gets its full 6 s.
+        let late = try XCTUnwrap(pending.markingDisplayed(at: 999))
+        XCTAssertTrue(late.isVisible(at: 1004.9)); XCTAssertFalse(late.isVisible(at: 1005))
+    }
+
+    func testNewerEventReplacesOlderNoticeSeenOrNot() throws {
+        let none = BreakCompletionFeedback.Outcome()
+        let old = try XCTUnwrap(TransientNotice(.breakCompleted(today: 1), now: 10).markingDisplayed(at: 11))
+        let replaced = try XCTUnwrap(TransientNotice.next(current: old, outcome: none, naturalBreak: true, todayBreaks: 1, now: 12))
+        XCTAssertEqual(replaced.kind, .naturalBreak); XCTAssertTrue(replaced.isPending); XCTAssertEqual(replaced.postedAt, 12)
+        let completed = BreakCompletionFeedback.Outcome(completed: true, playSound: false)
+        let again = try XCTUnwrap(TransientNotice.next(current: replaced, outcome: completed, todayBreaks: 2, now: 20))
+        XCTAssertEqual(again.kind, .breakCompleted(today: 2)); XCTAssertTrue(again.isPending)
+        XCTAssertNotEqual(again.postedAt, replaced.postedAt, "a replaced notice gets a new identity for the view")
     }
 
     func testCompletionOutranksNaturalBreakInOnePublish() {

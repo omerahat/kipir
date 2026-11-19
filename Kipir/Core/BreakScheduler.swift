@@ -35,6 +35,9 @@ final class BreakScheduler {
         saved = checkpoint.flatMap { $0.isValid ? $0 : nil } ??
             Checkpoint(target: self.settings.work, today: DailyStats(day: calendar.startOfDay(for: date())))
         inWindow = self.settings.workingHours.contains(date(), calendar: calendar)
+        // A checkpoint saved off hours that is restored inside the window is a genuine out-to-in transition.
+        if saved.wasOffHours && inWindow { restartIntervalOnWindowEntry() }
+        saved.wasOffHours = !inWindow
         if saved.phase == .onBreak { exercises = makeExercises(elapsed: saved.breakDuration - saved.breakRemaining) }
         rollover()
         reconcileMeeting()
@@ -81,7 +84,11 @@ final class BreakScheduler {
         if reconcileMeeting() { dropAwayChain(); baseline(); return }
         // Entering or leaving the working window rebaselines like meeting expiration; the crossing sample is discarded.
         // A break already in progress keeps counting down (DECISIONS 019), so its sample is not discarded.
-        if refreshWindow(), saved.phase != .onBreak { dropAwayChain(); baseline(); return }
+        // Entering the window starts a new working period: a stale interval or Due episode restarts (DECISIONS 025).
+        if refreshWindow() {
+            if inWindow { restartIntervalOnWindowEntry() }
+            if saved.phase != .onBreak { dropAwayChain(); baseline(); return }
+        }
         guard t.isFinite, i.isFinite, i >= 0 else {
             pending = 0; previousTime = nil; previousIdle = nil; isIdle = true; dropAwayChain(); return
         }
@@ -192,7 +199,8 @@ final class BreakScheduler {
 
     func updateSettings(_ value: Settings) {
         tick(); settings = value.validated()
-        inWindow = settings.workingHours.contains(date(), calendar: calendar)
+        // Toggling or editing the window in Settings never restarts the interval; only a clock transition does.
+        inWindow = settings.workingHours.contains(date(), calendar: calendar); saved.wasOffHours = !inWindow
         if !saved.snoozed && saved.phase != .onBreak {
             saved.target = settings.work
             // Off hours never starts a Due episode, but an existing one is preserved.
@@ -254,8 +262,10 @@ final class BreakScheduler {
             return false
         }
         if suspended {
-            // Lock, display-off and inactive sessions keep the heartbeat but cannot be user input.
-            if validDelta && awayOpen { away += delta; return applyNaturalBreak() }
+            // Lock, display-off and inactive sessions keep the heartbeat but cannot be user input, and system sleep
+            // stops monotonic uptime, so a coalesced heartbeat of any finite positive length is verified away time.
+            // Work credit and break countdown keep their own 10 s rule (DECISIONS 025).
+            if delta > 0 && delta.isFinite && awayOpen { away += delta; return applyNaturalBreak() }
             dropAwayChain(); return false
         }
         if inputSeen { awayOpen = true; away = 0; armNaturalNotice(); return false }
@@ -264,7 +274,7 @@ final class BreakScheduler {
         return false
     }
     private func applyNaturalBreak() -> Bool {
-        guard settings.naturalBreak > 0, away >= max(settings.naturalBreak, settings.afk + 60) else { return false }
+        guard settings.naturalBreak > 0, away >= settings.effectiveNaturalBreak else { return false }
         guard saved.activeWork > 0 || saved.phase == .due || saved.snoozed else { return false }
         resetInterval()
         pending = 0
@@ -274,8 +284,15 @@ final class BreakScheduler {
     @discardableResult private func refreshWindow() -> Bool {
         let value = settings.workingHours.contains(date(), calendar: calendar)
         guard value != inWindow else { return false }
-        inWindow = value
+        inWindow = value; saved.wasOffHours = !value
         return true
+    }
+    /// A new working period begins: a stale interval or Due episode restarts without touching today's totals or
+    /// the short/long cycle, and without a natural-break notice. A running break is never interrupted.
+    private func restartIntervalOnWindowEntry() {
+        guard saved.phase != .onBreak,
+              saved.activeWork > 0 || saved.phase == .due || saved.snoozed else { return }
+        resetInterval(); pending = 0
     }
     @discardableResult private func rollover() -> Bool {
         let day = calendar.startOfDay(for: date())

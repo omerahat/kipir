@@ -18,7 +18,12 @@ final class AppController: ObservableObject {
     @Published private(set) var loginMessage: String?
     /// Transient line under the timer (completed break / natural break); expires from the heartbeat.
     @Published private(set) var notice: TransientNotice?
-    @AppStorage("onboarded") var onboarded = false
+    /// Stored in UserDefaults; the setter publishes explicitly because `@AppStorage` inside an
+    /// `ObservableObject` does not.
+    var onboarded: Bool {
+        get { UserDefaults.standard.bool(forKey: "onboarded") }
+        set { objectWillChange.send(); UserDefaults.standard.set(newValue, forKey: "onboarded") }
+    }
 
     var language: String {
         UserDefaults.standard.string(forKey: "language") == "en" ? "en" : "tr"
@@ -58,11 +63,16 @@ final class AppController: ObservableObject {
         publish()
     }
     func tick() {
-        let oldPhase = engine.checkpoint.phase
-        let oldMeeting = engine.meeting
+        let before = engine.checkpoint
         engine.tick()
+        let after = engine.checkpoint
         let now = ProcessInfo.processInfo.systemUptime
-        publish(save: oldPhase != engine.checkpoint.phase || oldMeeting != engine.meeting || now - lastSave >= 15)
+        // Persist every reset or episode change at once: natural-break and window-entry resets are
+        // working -> working, so a phase comparison alone would miss them.
+        let changed = before.phase != after.phase || before.meeting != after.meeting
+            || after.activeWork < before.activeWork || before.dueID != after.dueID
+            || before.wasOffHours != after.wasOffHours
+        publish(save: changed || now - lastSave >= 15)
     }
     func perform(_ action: SchedulerAction) { engine.perform(action); publish(save: true) }
     func changeSettings(_ change: (inout Settings) -> Void) {
@@ -72,6 +82,12 @@ final class AppController: ObservableObject {
     func setMeeting(_ enabled: Bool, minutes: Int? = nil) {
         engine.setMeeting(enabled, duration: minutes.map { Double($0) * 60 })
         publish(save: true)
+    }
+    /// The popover actually displayed the notice row: its short visible lifetime starts now.
+    func noticeDisplayed() {
+        guard let notice, notice.isPending else { return }
+        let next = notice.markingDisplayed(at: ProcessInfo.processInfo.systemUptime)
+        if next != self.notice { self.notice = next }
     }
     func navigateExercise(_ offset: Int) { engine.navigateExercise(offset); publish(save: true) }
     func save() { engine.tick(); publish(save: true) }
@@ -85,8 +101,7 @@ final class AppController: ObservableObject {
         let naturalBreak = engine.consumeNaturalBreak()
         let next = TransientNotice.next(current: notice, outcome: outcome, naturalBreak: naturalBreak, todayBreaks: engine.today.breaks, now: now)
         if next != notice { notice = next }
-        // A natural reset is working -> working, so the phase-change save trigger in tick() misses it.
-        if save || naturalBreak { store.save(engine.checkpoint); lastSave = now }
+        if save { store.save(engine.checkpoint); lastSave = now }
         notifications.sync(engine: engine)
         revision &+= 1
     }

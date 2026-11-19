@@ -129,5 +129,8 @@ struct MenuBarView: View {
         return Label(text, systemImage: notice.count == nil ? "arrow.clockwise" : "checkmark.circle")
             .font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity)
             .accessibilityElement(children: .combine)
+            // The visible lifetime starts when the row is actually shown; a replaced notice has a new identity.
+            .id(notice.postedAt)
+            .onAppear { controller.noticeDisplayed() }
     }
 }

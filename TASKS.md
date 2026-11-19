@@ -96,7 +96,7 @@ Automated evidence is in TESTING.md ("0.2 integration"); unchecked items need a 
 - [x] Scheduler: conservative natural break with unlock baseline and first-input notice (DECISIONS 018); working hours with injected calendar and `offHours` status (DECISIONS 019); deterministic tests, including two older tests that now set `naturalBreak = 0`.
 - [x] Notifications: effective state with a single primary action, diagnostics disclosure, explicit-click-only requests (DECISIONS 022).
 - [x] First run: two-step onboarding inside the popover.
-- [x] Presentation: menu bar style (timer/icon) with tooltip, per-state status notes, break-length presets with a non-destructive Custom row, 6 s transient notices, working-hours editor, natural-break and exercise-focus pickers, spacing scale (DECISIONS 023).
+- [x] Presentation: menu bar style (timer/icon) with tooltip, per-state status notes, break-length presets with a non-destructive Custom row, transient notices (6 s after the popover shows them), working-hours editor, natural-break and exercise-focus pickers, spacing scale (DECISIONS 023).
 - [x] Exercises: 11-movement catalog with body areas, deterministic rotation, focus fallback (DECISIONS 020, 024), flat vector key-pose redesign, loop fitting, visual resync, Reduce Motion pairs.
 - [x] Release preparation: `Scripts/release-developer-id.sh` and `WRITE_CASK` guard (DECISIONS 021); guard tests with stubbed tools.
 - [x] Automated verification: `swift test` 136/136, Xcode 143/143, localization and release-script checks (TESTING.md).

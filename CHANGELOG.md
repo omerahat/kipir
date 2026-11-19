@@ -1,5 +1,13 @@
 # Kıpır — Changelog
 
+## Unreleased — 0.2 review fixes
+- Entering the working window starts a fresh interval; a Due episode from the previous workday no longer returns silently (DECISIONS 025).
+- A long screen lock or display sleep counts as being away even when the heartbeat is coalesced; work time is still never credited while locked or asleep.
+- Completion and natural-break notices wait up to 15 minutes for the popover, then show for 6 s.
+- The checkpoint is saved when a natural or window-entry reset happens; a malformed exercise rotation no longer discards the session.
+- Settings states the effective natural-break threshold when the idle threshold raises it; clearer notice and lock copy; onboarding publishes and resumes at the notification step.
+- Developer ID script: Gatekeeper assessment and codesign output are captured before grepping (no pipefail/SIGPIPE failures). Removed unused strings.
+
 ## 0.1.0 — 2026-10-30
 
 Initial native macOS menu bar implementation: confirmed active-work accounting, conservative AFK exclusion, short/long breaks, active snooze, skip, pause, Meeting Mode and reset. Local validated settings/session/day totals; optional actionable notifications and login registration. Turkish localized native panel/settings and generated icon. Deterministic core tests and Xcode project. See TESTING.md for executed evidence and open device acceptance gates.

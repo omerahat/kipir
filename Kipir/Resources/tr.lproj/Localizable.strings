@@ -6,8 +6,6 @@
 "status.due" = "Mola zamanı";
 "status.onBreak" = "Molada";
 "status.suspended" = "Sistem beklemede";
-"welcome.title" = "Küçük bir hareket, iyi bir başlangıç.";
-"welcome.body" = "Kıpır yalnızca etkin kullanım süresini sayar. Her şey bu Mac’te kalır. Bildirim izni isteğe bağlıdır.";
 "welcome.done" = "Başlayalım";
 "break.start" = "Molaya başla";
 "break.end" = "Molayı bitir";
@@ -16,7 +14,6 @@
 "pause" = "Duraklat";
 "resume" = "Sürdür";
 "meeting" = "Toplantı modu";
-"timer.break" = "Mola bitimine";
 "timer.untilBreak" = "Molaya kalan";
 "timer.confirmed" = "Etkin çalışma:";
 "next.long" = "Sıradaki mola uzun bir nefes.";
@@ -120,6 +117,7 @@
 "menubar.offHours" = "Mesai dışı";
 
 /* ==== Scheduler workstream: add keys only between these markers ==== */
+"ui.naturalBreak.effective" = "Şu anki hareketsizlik eşiğiyle en az %d dk.";
 /* ==== end scheduler workstream ==== */
 
 /* ---- separator: do not edit ---- */
@@ -143,7 +141,7 @@
 
 /* ==== UI workstream: add keys only between these markers ==== */
 "ui.notice.breakCompleted" = "Bugün %d mola tamamlandı.";
-"ui.notice.naturalBreak" = "Doğal mola algılandı. Çalışma sayacı yenilendi.";
+"ui.notice.naturalBreak" = "Bir süredir uzaktaydın; çalışma sayacı yenilendi.";
 "ui.notif.state.off" = "Mola bildirimleri kapalı.";
 "ui.notif.state.needsPermission" = "Bildirim izni henüz istenmedi.";
 "ui.notif.state.denied" = "Bildirim izni kapalı.";
@@ -157,7 +155,7 @@
 "ui.status.note.idle" = "Bir süredir girdi yok; bu süre sayılmıyor.";
 "ui.status.note.paused" = "Sen duraklattın; sayaç bekliyor.";
 "ui.status.note.meeting" = "Toplantı modu açık; sayaç donduruldu.";
-"ui.status.note.suspended" = "Ekran kilitli veya Mac uykuda; bu süre sayılmıyor.";
+"ui.status.note.suspended" = "Ekran kilitli veya Mac uykuda; çalışma süresi sayılmıyor.";
 "ui.status.note.offHours" = "Çalışma saatleri dışında; süre sayılmıyor, hatırlatma yapılmıyor.";
 "ui.status.note.due" = "Mola zamanı geldi. Şimdi başlayabilir ya da erteleyebilirsin.";
 "ui.status.note.onBreak" = "Mola sürüyor. İstediğin zaman bitirebilirsin.";

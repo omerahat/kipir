@@ -4,7 +4,13 @@ import SwiftUI
 /// Users with `onboarded` already stored never see it (the key is shared with `AppController`).
 struct OnboardingView: View {
     @ObservedObject var controller: AppController
-    @State private var step = 0
+    @State private var step: Int
+
+    /// Reopening the popover after the system permission prompt resumes at the notification step.
+    init(controller: AppController) {
+        self.controller = controller
+        _step = State(initialValue: controller.notifications.capabilities.permission == .unknown ? 0 : 1)
+    }
 
     private func row(_ symbol: String, _ key: String) -> some View {
         HStack(alignment: .top, spacing: 8) {
