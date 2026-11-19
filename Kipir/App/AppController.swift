@@ -16,6 +16,8 @@ final class AppController: ObservableObject {
     @Published private(set) var settings: Settings
     @Published private(set) var loginEnabled = false
     @Published private(set) var loginMessage: String?
+    /// Transient line under the timer (completed break / natural break); expires from the heartbeat.
+    @Published private(set) var notice: TransientNotice?
     @AppStorage("onboarded") var onboarded = false
 
     var language: String {
@@ -74,14 +76,23 @@ final class AppController: ObservableObject {
     func navigateExercise(_ offset: Int) { engine.navigateExercise(offset); publish(save: true) }
     func save() { engine.tick(); publish(save: true) }
     private func publish(save: Bool = false) {
-        BreakCompletionFeedback.consume(from: engine) {
+        // One consumption feeds both the sound and the notice; skips and manual finishes yield neither.
+        let now = ProcessInfo.processInfo.systemUptime
+        let outcome = BreakCompletionFeedback.consume(from: engine) {
             breakSound?.volume = 0.25
             breakSound?.play()
         }
-        if save { store.save(engine.checkpoint); lastSave = ProcessInfo.processInfo.systemUptime }
+        let next = TransientNotice.next(current: notice, outcome: outcome, todayBreaks: engine.today.breaks, now: now)
+        if next != notice { notice = next }
+        if save { store.save(engine.checkpoint); lastSave = now }
         notifications.sync(engine: engine)
         revision &+= 1
     }
+    var notificationState: NotificationEffectiveState {
+        notifications.effectiveState(enabled: settings.notifications)
+    }
+    /// Explicit user click: request permission or open System Settings, whichever the current state offers.
+    func performNotificationAction() { notifications.perform(notificationState.primaryAction) }
     func testNotification() {
         Task { await notifications.testNotification(enabled: { self.settings.notifications }, sound: settings.sound) }
     }

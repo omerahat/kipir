@@ -78,7 +78,20 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         capabilities = await delivery.settings()
         onChange?()
     }
+    /// Presentation state for the stored preference; never claims delivery without OS authorization.
+    func effectiveState(enabled: Bool) -> NotificationEffectiveState {
+        NotificationEffectiveState.derive(enabled: enabled, capabilities: capabilities)
+    }
+    /// Runs the one explicit action the current state offers; only user clicks call this.
+    func perform(_ action: NotificationEffectiveState.PrimaryAction) {
+        switch action {
+        case .requestPermission: requestPermission()
+        case .openSettings: openNotificationSettings()
+        case .none: break
+        }
+    }
     func requestPermission() {
+        errorKey = nil; errorDetail = nil; onChange?()
         Task {
             do { try await delivery.requestPermission() }
             catch { errorKey = "notification.permissionError"; errorDetail = error.localizedDescription }
@@ -105,6 +118,7 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
             guard visible == due, engine.reminderID == due, engine.settings.notifications else { return }
             do {
                 try await delivery.add(request)
+                if errorKey == "notification.deliveryError" { errorKey = nil; onChange?() }
                 // Cancellation can happen while the OS accepts the request.
                 if visible != due || engine.reminderID != due || !engine.settings.notifications {
                     delivery.remove(due.uuidString)

@@ -9,16 +9,23 @@ struct KipirApp: App {
             MenuBarView(controller: controller).preferredColorScheme(controller.colorScheme)
                 .environment(\.locale, Locale(identifier: controller.language))
         } label: {
-            let status = MenuBarStatusFormatter(status: controller.engine.status, remaining: controller.engine.remaining)
-            Label {
-                if let key = status.textKey {
-                    Text(String(format: L(key), status.minutes)).monospacedDigit()
-                        .frame(minWidth: 64, alignment: .leading)
+            let status = MenuBarStatusFormatter(status: controller.engine.status, remaining: controller.engine.remaining,
+                                                iconOnly: controller.settings.menuBarStyle == "icon")
+            let summary = status.summary(L)
+            Group {
+                if status.showsText, let key = status.textKey {
+                    Label {
+                        // Only the minute countdown reserves width (avoids jitter); other labels size to content.
+                        Text(String(format: L(key), status.minutes)).monospacedDigit()
+                            .frame(minWidth: key == "menubar.minutes" ? 64 : nil, alignment: .leading)
+                    } icon: { Image(systemName: status.symbol) }
+                    .labelStyle(.titleAndIcon)
+                } else {
+                    Image(systemName: status.symbol)
                 }
-            } icon: { Image(systemName: status.symbol) }
-            .labelStyle(.titleAndIcon)
-            .accessibilityLabel(L("app.name") + ", " + L("status." + controller.engine.status.rawValue)
-                + ", " + String(format: L("menubar.minutes"), status.minutes))
+            }
+            .help(summary)
+            .accessibilityLabel(summary)
         }
         .menuBarExtraStyle(.window)
         SwiftUI.Settings {
