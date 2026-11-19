@@ -92,13 +92,13 @@ enum TimingPreset: String, CaseIterable {
 
 // Controller supplies native playback; consuming a disabled event prevents later replay.
 enum BreakCompletionFeedback {
-    /// One consumption of the scheduler's ephemeral events, shared by the sound and the on-screen notice.
+    /// One consumption of the scheduler's completion event, shared by the sound and the on-screen notice.
+    /// The natural-break event is deliberately not consumed here; the controller reads it separately.
     struct Outcome: Equatable {
         /// A scheduler-credited completion occurred (never true for skip, manual finish, pause, meeting or sleep).
         var completed = false
         /// Preference was true when the break completed and is still true now.
         var playSound = false
-        var naturalBreak = false
     }
 
     @discardableResult
@@ -108,7 +108,6 @@ enum BreakCompletionFeedback {
             outcome.completed = true
             outcome.playSound = captured && engine.settings.breakEndSound
         }
-        outcome.naturalBreak = engine.consumeNaturalBreak()
         return outcome
     }
 
@@ -144,10 +143,10 @@ struct TransientNotice: Equatable {
 
     /// A completion outranks a natural break reported in the same publish; no event means the current notice
     /// is kept until it expires.
-    static func next(current: TransientNotice?, outcome: BreakCompletionFeedback.Outcome,
+    static func next(current: TransientNotice?, outcome: BreakCompletionFeedback.Outcome, naturalBreak: Bool = false,
                      todayBreaks: Int, now: TimeInterval) -> TransientNotice? {
         if outcome.completed { return TransientNotice(.breakCompleted(today: max(0, todayBreaks)), now: now) }
-        if outcome.naturalBreak { return TransientNotice(.naturalBreak, now: now) }
+        if naturalBreak { return TransientNotice(.naturalBreak, now: now) }
         guard let current, current.isVisible(at: now) else { return nil }
         return current
     }

@@ -82,9 +82,11 @@ final class AppController: ObservableObject {
             breakSound?.volume = 0.25
             breakSound?.play()
         }
-        let next = TransientNotice.next(current: notice, outcome: outcome, todayBreaks: engine.today.breaks, now: now)
+        let naturalBreak = engine.consumeNaturalBreak()
+        let next = TransientNotice.next(current: notice, outcome: outcome, naturalBreak: naturalBreak, todayBreaks: engine.today.breaks, now: now)
         if next != notice { notice = next }
-        if save { store.save(engine.checkpoint); lastSave = now }
+        // A natural reset is working -> working, so the phase-change save trigger in tick() misses it.
+        if save || naturalBreak { store.save(engine.checkpoint); lastSave = now }
         notifications.sync(engine: engine)
         revision &+= 1
     }
