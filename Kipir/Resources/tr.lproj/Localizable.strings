@@ -65,11 +65,11 @@
 "exercise.shoulders" = "Omuz çevirme";
 "exercise.shoulders.instruction" = "Kollarını rahat bırak; omuzlarını küçük, yavaş dairelerle geriye çevir.";
 "exercise.chest" = "Göğüs açma";
-"exercise.chest.instruction" = "Dirseklerin yumuşakken kollarını iki yana aç, sonra rahatça geri getir.";
+"exercise.chest.instruction" = "Kollarını göğsünün önünde birleştir, sonra nazikçe iki yana aç.";
 "exercise.wrists" = "Bilek esnetme";
 "exercise.wrists.instruction" = "Bir elinin parmaklarını diğer elinle nazikçe geriye yönlendir; yarısında el değiştir.";
 "exercise.calves" = "Topuk kaldırma";
-"exercise.calves.instruction" = "Denge için masaya hafifçe tutun; topuklarını yavaşça kaldırıp indir.";
+"exercise.calves.instruction" = "Denge için masadan hafifçe tut; topuklarını yavaşça kaldırıp indir.";
 "exercise.walk" = "Masadan uzaklaş";
 "exercise.walk.instruction" = "Ekranı izlemene gerek yok; rahat bir tempoyla kısa bir yürüyüş yap.";
 "exercise.safety" = "Hareketleri nazikçe yap. Ağrı veya baş dönmesi olursa dur. Bu rehber tıbbi öneri değildir.";
@@ -125,6 +125,18 @@
 /* ---- separator: do not edit ---- */
 
 /* ==== Exercise workstream: add keys only between these markers ==== */
+"exercise.neckTilt" = "Boyun yana eğme";
+"exercise.neckTilt.instruction" = "Omuzların rahat dursun; başını yavaşça bir yana, sonra diğer yana eğ.";
+"exercise.shrug" = "Omuz silkme";
+"exercise.shrug.instruction" = "Omuzlarını kulaklarına doğru kaldır, sonra rahatça bırak.";
+"exercise.upperBack" = "Sırtı yuvarlama";
+"exercise.upperBack.instruction" = "Oturarak ellerini öne uzat, sırtını hafifçe yuvarla; sonra dikleş.";
+"exercise.twist" = "Oturarak gövde çevirme";
+"exercise.twist.instruction" = "Oturduğun yerde gövdeni yavaşça bir yana çevir, sonra diğer yana.";
+"exercise.fingers" = "Parmak açıp kapama";
+"exercise.fingers.instruction" = "Parmaklarını rahatça aç, sonra yumruk yap ve yavaşça tekrarla.";
+"exercise.march" = "Yerinde yürüme";
+"exercise.march.instruction" = "Ayağa kalk; dizlerini rahat bir tempoyla sırayla kaldır.";
 /* ==== end exercise workstream ==== */
 
 /* ---- separator: do not edit ---- */
