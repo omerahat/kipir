@@ -119,16 +119,37 @@ enum BreakCompletionFeedback {
     }
 }
 
-/// Short-lived, non-persistent message under the timer. Expiry is evaluated from the controller heartbeat
-/// using monotonic time supplied by the caller; no timer is involved.
+/// Short-lived, non-persistent message under the timer. It stays pending (unseen) for up to `pendingLifetime`
+/// so a popover opened later still shows it, then lives `lifetime` from the moment the popover actually
+/// displayed it. Expiry is evaluated from the controller heartbeat using monotonic time supplied by the caller;
+/// no timer is involved.
 struct TransientNotice: Equatable {
     enum Kind: Equatable { case breakCompleted(today: Int), naturalBreak }
+    /// Visible lifetime once displayed.
     static let lifetime: TimeInterval = 6
+    /// How long an event waits for the popover to be opened.
+    static let pendingLifetime: TimeInterval = 15 * 60
     let kind: Kind
-    let expiresAt: TimeInterval
+    /// Monotonic time of the event; also identifies the notice for the view.
+    let postedAt: TimeInterval
+    /// Monotonic time the popover first displayed it, nil while still pending.
+    private(set) var displayedAt: TimeInterval?
 
-    init(_ kind: Kind, now: TimeInterval) { self.kind = kind; expiresAt = now + Self.lifetime }
-    func isVisible(at now: TimeInterval) -> Bool { now.isFinite && now < expiresAt }
+    init(_ kind: Kind, now: TimeInterval) { self.kind = kind; postedAt = now }
+    var isPending: Bool { displayedAt == nil }
+    func isVisible(at now: TimeInterval) -> Bool {
+        guard now.isFinite else { return false }
+        if let displayedAt { return now < displayedAt + Self.lifetime }
+        return now < postedAt + Self.pendingLifetime
+    }
+    /// The popover displayed this notice: the 6 s lifetime starts now. Idempotent once displayed; an expired
+    /// notice yields nil.
+    func markingDisplayed(at now: TimeInterval) -> TransientNotice? {
+        guard isVisible(at: now) else { return nil }
+        guard displayedAt == nil else { return self }
+        var copy = self; copy.displayedAt = now
+        return copy
+    }
     var textKey: String {
         switch kind {
         case .breakCompleted: return "ui.notice.breakCompleted"
@@ -141,8 +162,8 @@ struct TransientNotice: Equatable {
         return nil
     }
 
-    /// A completion outranks a natural break reported in the same publish; no event means the current notice
-    /// is kept until it expires.
+    /// A completion outranks a natural break reported in the same publish and any newer event replaces an older
+    /// one; no event means the current notice is kept until it expires.
     static func next(current: TransientNotice?, outcome: BreakCompletionFeedback.Outcome, naturalBreak: Bool = false,
                      todayBreaks: Int, now: TimeInterval) -> TransientNotice? {
         if outcome.completed { return TransientNotice(.breakCompleted(today: max(0, todayBreaks)), now: now) }

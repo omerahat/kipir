@@ -183,12 +183,19 @@ final class NaturalBreakTests: XCTestCase {
         c.step(e); c.step(e, seconds: 600, input: false)
         XCTAssertEqual(e.activeWork, 0)
     }
-    func testUnknownGapWhileSuspendedTaints() {
+    func testCoalescedGapWhileSuspendedIsVerifiedAwayTimeButBackwardClockStillTaints() {
+        // DECISIONS 025: while suspended, input is impossible and system sleep stops uptime, so a coalesced
+        // heartbeat of any finite positive length counts as away time (this test used to expect a taint).
         let c = clock(); let e = c.engine(); c.step(e, seconds: 20)
         e.setSuspended(true); c.step(e, seconds: 300, input: false)
         c.time += 400; c.date += 400; c.idle += 400; e.tick()
-        c.step(e, seconds: 700, input: false)
-        XCTAssertEqual(e.activeWork, 20)
+        XCTAssertEqual(e.activeWork, 0)
+        // A backward monotonic step while suspended is still invalid and taints the chain.
+        let d = clock(); let f = d.engine(); d.step(f, seconds: 20)
+        f.setSuspended(true); d.step(f, seconds: 300, input: false)
+        d.time -= 100; d.idle += 1; f.tick()
+        d.step(f, seconds: 700, input: false)
+        XCTAssertEqual(f.activeWork, 20)
     }
     func testInvalidSamplesTaintTheChain() {
         let c = clock(); let e = c.engine(); c.step(e, seconds: 20)
@@ -374,7 +381,7 @@ final class NaturalBreakTests: XCTestCase {
         XCTAssertEqual(e.status, .offHours); XCTAssertNil(e.reminderID)
         XCTAssertEqual(e.checkpoint.phase, .working); XCTAssertNil(e.checkpoint.dueID)
     }
-    func testExistingDueEpisodeIsPreservedOffHoursAndRestoredWithSameID() {
+    func testDueEpisodeIsSuppressedOffHoursAndReEntryRestartsIntervalWithoutStatsCredit() {
         let c = clock(at: { self.local($0, 2027, 1, 15, 17, 58) }); let s = settings(work: 60, hours: hours())
         let e = c.engine(s); c.step(e, seconds: 60)
         XCTAssertEqual(e.status, .due); let id = e.reminderID; XCTAssertNotNil(id)
@@ -383,8 +390,112 @@ final class NaturalBreakTests: XCTestCase {
         XCTAssertEqual(e.checkpoint.phase, .due); XCTAssertEqual(e.checkpoint.dueID, id)
         e.updateSettings(s)                              // an unrelated settings write must not drop Due
         XCTAssertEqual(e.checkpoint.phase, .due)
-        c.date = self.local(c.calendar, 2027, 1, 18, 9, 0); c.time += 3; e.tick()
+        c.date = self.local(c.calendar, 2027, 1, 18, 9, 0); c.time += 3; e.tick()   // Monday: a new working period
+        XCTAssertEqual(e.status, .working); XCTAssertNil(e.reminderID); XCTAssertNil(e.checkpoint.dueID)
+        XCTAssertEqual(e.checkpoint.phase, .working); XCTAssertEqual(e.activeWork, 0)
+        XCTAssertFalse(e.checkpoint.snoozed); XCTAssertEqual(e.checkpoint.target, 60)
+        XCTAssertEqual(e.today.breaks, 0); XCTAssertEqual(e.today.activeSeconds, 0)
+        XCTAssertEqual(e.checkpoint.completedShorts, 0)
+        XCTAssertFalse(e.consumeNaturalBreak()); c.step(e); XCTAssertFalse(e.consumeNaturalBreak())
+    }
+    func testFridayEveningDueMondayReEntryGivesFreshIntervalAndNewEpisode() {
+        let c = clock(at: { self.local($0, 2027, 1, 15, 17, 58) }); let s = settings(work: 60, hours: hours())
+        let e = c.engine(s); c.step(e, seconds: 60); let id = e.reminderID
+        c.step(e, seconds: 120)
+        c.date = self.local(c.calendar, 2027, 1, 18, 8, 59, 50); c.time += 3; e.tick()   // Monday, still off hours
+        XCTAssertEqual(e.status, .offHours); XCTAssertEqual(e.checkpoint.dueID, id)
+        c.step(e, seconds: 10)                           // 09:00:00 enters the window
+        XCTAssertEqual(e.status, .working); XCTAssertNil(e.reminderID); XCTAssertNil(e.checkpoint.dueID)
+        XCTAssertEqual(e.activeWork, 0)
+        c.step(e, seconds: 5); XCTAssertEqual(e.activeWork, 5)
+        c.step(e, seconds: 60)
+        XCTAssertEqual(e.status, .due); XCTAssertNotNil(e.reminderID); XCTAssertNotEqual(e.reminderID, id)
+    }
+    func testReEntryOnTheSameDayKeepsTodaysTotals() {
+        let w = hours(start: 22 * 60, end: 6 * 60, days: [1, 2, 3, 4, 5, 6, 7])
+        let c = clock(at: { self.local($0, 2027, 1, 15, 5, 59, 30) }); let e = c.engine(settings(hours: w))
+        c.step(e, seconds: 40)                           // 06:00 leaves the window; the crossing sample is dropped
+        let credited = e.today.activeSeconds; XCTAssertGreaterThan(credited, 0)
+        XCTAssertEqual(e.status, .offHours); XCTAssertEqual(e.activeWork, credited)
+        c.date = self.local(c.calendar, 2027, 1, 15, 22, 0); c.time += 3; e.tick()
+        XCTAssertEqual(e.status, .working); XCTAssertEqual(e.activeWork, 0)
+        XCTAssertEqual(e.today.activeSeconds, credited); XCTAssertEqual(e.today.breaks, 0)
+        XCTAssertFalse(e.consumeNaturalBreak())
+    }
+    func testRestartOffHoursThenReEntryRestartsTheInterval() {
+        let s = settings(work: 60, hours: hours())
+        let c = clock(at: { self.local($0, 2027, 1, 15, 17, 58) }); let e = c.engine(s)
+        c.step(e, seconds: 150)
+        let saved = e.checkpoint; let id = saved.dueID
+        XCTAssertEqual(saved.phase, .due); XCTAssertTrue(saved.wasOffHours)
+        c.date = local(c.calendar, 2027, 1, 15, 23, 0); c.time += 3600
+        let r = c.engine(s, checkpoint: saved)
+        XCTAssertEqual(r.status, .offHours); XCTAssertNil(r.reminderID); XCTAssertEqual(r.checkpoint.dueID, id)
+        c.step(r, seconds: 30); XCTAssertEqual(r.checkpoint.phase, .due)
+        c.date = local(c.calendar, 2027, 1, 18, 9, 0); c.time += 3; r.tick()
+        XCTAssertEqual(r.status, .working); XCTAssertNil(r.checkpoint.dueID); XCTAssertEqual(r.activeWork, 0)
+        XCTAssertFalse(r.checkpoint.wasOffHours)
+    }
+    func testCheckpointSavedOffHoursAndRestoredInsideTheWindowRestarts() {
+        let s = settings(work: 60, hours: hours())
+        let c = clock(at: { self.local($0, 2027, 1, 15, 17, 58) }); let e = c.engine(s)
+        c.step(e, seconds: 150)
+        let saved = e.checkpoint; XCTAssertEqual(saved.phase, .due); XCTAssertTrue(saved.wasOffHours)
+        c.date = local(c.calendar, 2027, 1, 18, 10, 0); c.time += 3600
+        let r = c.engine(s, checkpoint: saved)
+        XCTAssertEqual(r.status, .working); XCTAssertNil(r.reminderID); XCTAssertNil(r.checkpoint.dueID)
+        XCTAssertEqual(r.activeWork, 0); XCTAssertFalse(r.checkpoint.wasOffHours)
+        c.step(r, seconds: 5); XCTAssertEqual(r.activeWork, 5)
+    }
+    func testCheckpointSavedInsideTheWindowIsKeptWhenRestoredInside() throws {
+        let s = settings(work: 60, hours: hours())
+        let c = clock(at: { self.local($0, 2027, 1, 15, 10, 0) }); let e = c.engine(s)
+        c.step(e, seconds: 20)
+        var legacy = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(e.checkpoint)) as? [String: Any])
+        legacy.removeValue(forKey: "wasOffHours")        // a 0.2 checkpoint written before the flag existed
+        let saved = try JSONDecoder().decode(Checkpoint.self, from: JSONSerialization.data(withJSONObject: legacy))
+        XCTAssertFalse(saved.wasOffHours)
+        c.time += 600; c.date += 600
+        let r = c.engine(s, checkpoint: saved)
+        XCTAssertEqual(r.activeWork, e.activeWork); XCTAssertFalse(r.checkpoint.wasOffHours)
+    }
+    func testSettingsToggleOfWorkingHoursNeverRestartsTheInterval() {
+        var plain = Settings(); plain.work = 60
+        let c = clock(at: { self.local($0, 2027, 1, 15, 22, 0) }); let e = c.engine(plain)
+        c.step(e, seconds: 60); let id = e.reminderID
+        XCTAssertEqual(e.status, .due); XCTAssertNotNil(id)
+        e.updateSettings(settings(work: 60, hours: hours()))      // 22:00 is off hours
+        XCTAssertEqual(e.status, .offHours); XCTAssertEqual(e.checkpoint.dueID, id)
+        e.updateSettings(plain)                                   // disabled again: back inside, not a clock transition
         XCTAssertEqual(e.status, .due); XCTAssertEqual(e.reminderID, id)
+        c.step(e, seconds: 3); XCTAssertEqual(e.reminderID, id)
+        // Moving the window around the current time while outside and then inside does not restart either.
+        e.updateSettings(settings(work: 60, hours: hours(start: 23 * 60, end: 23 * 60 + 30)))
+        XCTAssertEqual(e.status, .offHours)
+        e.updateSettings(settings(work: 60, hours: hours(start: 21 * 60, end: 23 * 60)))
+        XCTAssertEqual(e.status, .due); XCTAssertEqual(e.checkpoint.dueID, id)
+    }
+    func testBreakSpanningWindowEntryCompletesExactlyOnce() {
+        var s = settings(hours: hours()); s.shortBreak = 30
+        let c = clock(at: { self.local($0, 2027, 1, 15, 8, 59, 45) }); let e = c.engine(s)
+        e.perform(.startBreak); XCTAssertEqual(e.status, .onBreak)
+        c.step(e, seconds: 15)                           // 09:00:00: entered the window mid break
+        XCTAssertEqual(e.status, .onBreak); XCTAssertEqual(e.remaining, 15, accuracy: 0.001)
+        c.step(e, seconds: 15)
+        XCTAssertEqual(e.today.breaks, 1); XCTAssertEqual(e.checkpoint.completedShorts, 1)
+        XCTAssertNotNil(e.consumeBreakCompletion()); XCTAssertNil(e.consumeBreakCompletion())
+        XCTAssertEqual(e.status, .working)
+        c.step(e, seconds: 60); XCTAssertEqual(e.today.breaks, 1)
+    }
+    func testBreakAlreadyRunningWhenTheWindowEndsAndLaterEntersStillCountsOnce() {
+        var s = settings(hours: hours()); s.shortBreak = 30
+        let c = clock(at: { self.local($0, 2027, 1, 15, 17, 59, 50) }); let e = c.engine(s)
+        e.perform(.startBreak)
+        c.step(e, seconds: 40)                           // window ends mid break; the break still completes
+        XCTAssertEqual(e.today.breaks, 1); XCTAssertEqual(e.status, .offHours)
+        c.date = local(c.calendar, 2027, 1, 18, 9, 0); c.time += 3; e.tick()
+        XCTAssertEqual(e.status, .working); XCTAssertEqual(e.today.breaks, 0)   // Monday: new day stats
+        XCTAssertEqual(e.checkpoint.completedShorts, 1)  // the cycle position is kept
     }
     func testNaturalBreakDoesNotAccrueOffHours() {
         let c = clock(at: { self.local($0, 2027, 1, 15, 17, 58) }); let e = c.engine(settings(hours: hours()))
@@ -536,5 +647,90 @@ final class NaturalBreakTests: XCTestCase {
         e.setSuspended(true); c.step(e, seconds: 600, input: false)
         XCTAssertEqual(e.remaining, 90); XCTAssertEqual(e.today.breaks, 0)
         XCTAssertNil(e.consumeBreakCompletion()); XCTAssertFalse(e.consumeNaturalBreak())
+    }
+
+    // MARK: Review fixes (DECISIONS 025)
+
+    /// Advances the clock by `seconds` in one heartbeat, as a coalesced timer would.
+    private func coalescedTick(_ c: Clock, _ e: BreakScheduler, _ seconds: Double, input: Bool = false) {
+        c.time += seconds; c.date += seconds; c.idle = input ? 0 : c.idle + seconds; e.tick()
+    }
+    func testThirteenMinuteLockWithElevenSecondTicksResetsAtDefaultThreshold() {
+        let c = clock(); let e = c.engine(); c.step(e, seconds: 20)
+        e.setSuspended(true)
+        for _ in 0..<54 { coalescedTick(c, e, 11) }      // 594 s of verified away time
+        XCTAssertEqual(e.activeWork, 20)
+        coalescedTick(c, e, 11)                          // 605 s reaches the default threshold
+        XCTAssertEqual(e.activeWork, 0)
+        for _ in 0..<16 { coalescedTick(c, e, 11) }      // about 13 minutes in total
+        XCTAssertEqual(e.activeWork, 0); XCTAssertEqual(e.today.activeSeconds, 20)
+        XCTAssertEqual(e.today.breaks, 0); XCTAssertEqual(e.checkpoint.completedShorts, 0)
+        XCTAssertEqual(e.status, .suspended)
+        e.setSuspended(false); c.idle = 0; c.step(e)
+        XCTAssertTrue(e.consumeNaturalBreak()); XCTAssertEqual(e.activeWork, 1)   // lock time credits no work
+    }
+    func testElevenSecondTicksWhileUnsuspendedStillTaintTheChain() {
+        let c = clock(); let e = c.engine(); c.step(e, seconds: 20)
+        for _ in 0..<80 { coalescedTick(c, e, 11) }      // 880 s, but each gap exceeds 10 s unsuspended
+        XCTAssertEqual(e.activeWork, 20); XCTAssertEqual(e.status, .idle)
+        XCTAssertEqual(e.today.activeSeconds, 20)
+    }
+    func testCoalescedSuspendedGapNeverCreditsWorkOrBreakCountdown() {
+        let c = clock(); let e = c.engine(); e.perform(.startBreak)
+        e.setSuspended(true)
+        coalescedTick(c, e, 400)                         // one huge suspended heartbeat
+        XCTAssertEqual(e.remaining, 120); XCTAssertEqual(e.today.breaks, 0)
+        e.setSuspended(false); c.step(e, seconds: 5)
+        XCTAssertEqual(e.remaining, 115, accuracy: 0.001)
+    }
+    func testAFKSpanAtDefaultsResetsIntervalButKeepsTodaysTotals() {
+        let c = Clock(); let e = c.engine(); c.step(e, seconds: 20)
+        c.step(e, seconds: 600, input: false)
+        XCTAssertEqual(e.activeWork, 0); XCTAssertEqual(e.today.activeSeconds, 20)
+        XCTAssertEqual(e.today.breaks, 0); XCTAssertEqual(e.checkpoint.completedShorts, 0)
+    }
+    func testSuspendedSpanAtDefaultsResetsIntervalButKeepsTodaysTotals() {
+        let c = Clock(); let e = c.engine(); c.step(e, seconds: 20)
+        e.setSuspended(true); c.step(e, seconds: 900); e.setSuspended(false)
+        XCTAssertEqual(e.activeWork, 0); XCTAssertEqual(e.today.activeSeconds, 20)
+        XCTAssertEqual(e.today.breaks, 0); XCTAssertEqual(e.checkpoint.completedShorts, 0)
+    }
+    func testMalformedExerciseRotationIsClampedAndKeepsTheSession() throws {
+        let c = Clock(); let e = c.engine(); c.step(e, seconds: 20)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(e.checkpoint)) as? [String: Any])
+        for (raw, expected) in [(-1, 0), (5, 5), (2_000_000, 1_000_000)] {
+            object["exerciseRotation"] = raw
+            let decoded = try JSONDecoder().decode(Checkpoint.self, from: JSONSerialization.data(withJSONObject: object))
+            XCTAssertEqual(decoded.exerciseRotation, expected); XCTAssertTrue(decoded.isValid)
+        }
+        object["exerciseRotation"] = "bad"
+        XCTAssertEqual(try JSONDecoder().decode(Checkpoint.self, from: JSONSerialization.data(withJSONObject: object)).exerciseRotation, 0)
+        object["exerciseRotation"] = -1
+        let suite = "KipirTests.NaturalBreak.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set(try JSONSerialization.data(withJSONObject: object), forKey: "checkpoint")
+        let restored = c.engine(checkpoint: LocalStore(defaults: defaults).loadCheckpoint())
+        XCTAssertEqual(restored.activeWork, 20); XCTAssertEqual(restored.today.activeSeconds, 20)
+        XCTAssertEqual(restored.checkpoint.exerciseRotation, 0)
+    }
+    func testEffectiveNaturalBreakThreshold() {
+        var s = Settings()
+        XCTAssertEqual(s.effectiveNaturalBreak, 600); XCTAssertFalse(s.naturalBreakIsRaised)
+        s.afk = 600; s = s.validated()                   // 660 s exceeds the 600 s selection
+        XCTAssertEqual(s.effectiveNaturalBreak, 660); XCTAssertTrue(s.naturalBreakIsRaised)
+        XCTAssertEqual(s.effectiveNaturalBreakMinutes, 11)
+        s.naturalBreak = 300; s.afk = 300
+        XCTAssertEqual(s.effectiveNaturalBreak, 360); XCTAssertEqual(s.effectiveNaturalBreakMinutes, 6)
+        s.afk = 240; XCTAssertEqual(s.effectiveNaturalBreak, 300); XCTAssertFalse(s.naturalBreakIsRaised)   // equal is not raised
+        s.naturalBreak = 0
+        XCTAssertEqual(s.effectiveNaturalBreak, 0); XCTAssertFalse(s.naturalBreakIsRaised)
+        XCTAssertEqual(s.effectiveNaturalBreakMinutes, 0)
+    }
+    func testSchedulerUsesTheSharedEffectiveThreshold() {
+        var s = Settings(); s.afk = 600; s.naturalBreak = 300; s = s.validated()     // effective 660 s
+        let c = Clock(); let e = c.engine(s); c.step(e, seconds: 20)
+        c.step(e, seconds: 659, input: false); XCTAssertEqual(e.activeWork, 20)
+        c.step(e, seconds: 1, input: false); XCTAssertEqual(e.activeWork, 0)
     }
 }

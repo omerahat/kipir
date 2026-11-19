@@ -82,7 +82,8 @@ details=$(/usr/bin/codesign -dvv "$app" 2>&1)
 grep -qF "Authority=$KIPIR_DEVELOPER_ID" <<<"$details" || { echo "Signature does not carry the requested identity." >&2; exit 1; }
 grep -Eq 'flags=0x[0-9a-f]+\(.*runtime' <<<"$details" || { echo "Hardened runtime flag missing from signature." >&2; exit 1; }
 grep -q '^Timestamp=' <<<"$details" || { echo "Secure timestamp missing from signature." >&2; exit 1; }
-if /usr/bin/codesign -d --entitlements - "$app" 2>&1 | grep -q 'get-task-allow'; then
+entitlements=$(/usr/bin/codesign -d --entitlements - "$app" 2>&1 || true)
+if grep -q 'get-task-allow' <<<"$entitlements"; then
   echo "Release signature carries get-task-allow; notarization would reject it." >&2
   exit 1
 fi
@@ -105,7 +106,7 @@ xcrun notarytool submit "$submit_zip" --keychain-profile "$KIPIR_NOTARY_PROFILE"
 grep -q 'status: Accepted' "$notary_log" || { echo "Notarization was not accepted; see $notary_log. No release archive was created." >&2; exit 1; }
 xcrun stapler staple "$app"
 xcrun stapler validate "$app"
-assessment=$(/usr/sbin/spctl -a -vv -t exec "$app" 2>&1)
+assessment=$(/usr/sbin/spctl -a -vv -t exec "$app" 2>&1 || true)   # the greps below decide, not the exit status
 printf '%s\n' "$assessment"
 grep -q 'accepted' <<<"$assessment" || { echo "Gatekeeper assessment did not accept the stapled app." >&2; exit 1; }
 grep -q 'Notarized Developer ID' <<<"$assessment" || { echo "Gatekeeper source is not Notarized Developer ID." >&2; exit 1; }

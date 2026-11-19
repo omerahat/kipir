@@ -6,8 +6,6 @@
 "status.due" = "Time for a break";
 "status.onBreak" = "On a break";
 "status.suspended" = "System suspended";
-"welcome.title" = "A little movement goes a long way.";
-"welcome.body" = "Kıpır counts only active computer use. Everything stays on this Mac. Notifications are optional.";
 "welcome.done" = "Let’s begin";
 "break.start" = "Start break";
 "break.end" = "Finish break";
@@ -16,7 +14,6 @@
 "pause" = "Pause";
 "resume" = "Resume";
 "meeting" = "Meeting mode";
-"timer.break" = "Break remaining";
 "timer.untilBreak" = "Until next break";
 "timer.confirmed" = "Confirmed active work:";
 "next.long" = "Next up: a longer breather.";
@@ -119,6 +116,7 @@
 "menubar.offHours" = "Off hours";
 
 /* ==== Scheduler workstream: add keys only between these markers ==== */
+"ui.naturalBreak.effective" = "With your current idle threshold: at least %d min.";
 /* ==== end scheduler workstream ==== */
 
 /* ---- separator: do not edit ---- */
@@ -141,8 +139,8 @@
 /* ---- separator: do not edit ---- */
 
 /* ==== UI workstream: add keys only between these markers ==== */
-"ui.notice.breakCompleted" = "%d breaks completed today.";
-"ui.notice.naturalBreak" = "Natural break detected. Work timer restarted.";
+"ui.notice.breakCompleted" = "Break complete · today: %d";
+"ui.notice.naturalBreak" = "You were away for a while; work timer restarted.";
 "ui.notif.state.off" = "Break notifications are off.";
 "ui.notif.state.needsPermission" = "Notification permission not requested yet.";
 "ui.notif.state.denied" = "Notification permission is off.";
@@ -156,7 +154,7 @@
 "ui.status.note.idle" = "No recent input; this time isn't counted.";
 "ui.status.note.paused" = "Paused by you; the timer is waiting.";
 "ui.status.note.meeting" = "Meeting mode is on; the timer is frozen.";
-"ui.status.note.suspended" = "Screen locked or Mac asleep; this time isn't counted.";
+"ui.status.note.suspended" = "Screen locked or Mac asleep; work time isn't counted.";
 "ui.status.note.offHours" = "Outside working hours; time isn't counted and no reminders are sent.";
 "ui.status.note.due" = "Break time. Start now or snooze.";
 "ui.status.note.onBreak" = "Break in progress. End it whenever you like.";
