@@ -5,9 +5,11 @@ A little movement goes a long way.
 Kıpır is a private, native macOS 14+ menu bar assistant for gentle movement reminders. Turkish and English interfaces are available; Turkish is the default. No account, network, telemetry, input contents or dependencies.
 
 ## Features and usage
-Open the menu bar movement symbol to see confirmed active work, time until a break, today's aggregate totals and controls. Defaults: 45 minutes work, 2 minutes short break, 5 minutes long break after 3 completed short breaks, 90 seconds AFK, 10 minutes active-work snooze. Settings validates every value.
+Open the menu bar movement symbol (optionally with remaining minutes, or icon only) to see confirmed active work, time until a break, today's aggregate totals and controls. Defaults: 45 minutes work, 2 minutes short break, 5 minutes long break after 3 completed short breaks, 90 seconds AFK, 10 minutes active-work snooze. Settings validates every value.
 
-Pause and Meeting Mode freeze scheduling and statistics. Sleep, lock and unknown callback gaps receive no credit. Completing a countdown records a completed break timer, not exercise. Skip resets the interval without advancing the cycle. Snooze adds active work before another reminder. Notifications are optional; the panel always displays a due break.
+Pause and Meeting Mode freeze scheduling and statistics. Sleep, lock and unknown callback gaps receive no credit. Completing a countdown records a completed break timer, not exercise. Skip resets the interval without advancing the cycle. Snooze adds active work before another reminder. Notifications are optional; the panel always displays a due break. A one-line note under the header explains every non-working state.
+
+Natural break (default 10 minutes; Off/5/10/15): after that long with verified no input while Working or Due, the work interval restarts and a due reminder is withdrawn, so you are not reminded minutes after coming back. It is never counted as a completed break. Optional working hours (weekdays, start, end, overnight allowed) stop counting and reminders outside the window.
 
 ## Build and install
 Requires macOS 14+, Xcode with macOS SDK and Swift 5.9+. Open `Kipir.xcodeproj`, select **Kipir**, choose **My Mac**, and Run. Kıpır has no regular window: click the walking icon in the menu bar to open it. Xcode signs local Debug builds as **Sign to Run Locally**; keep code signing enabled when running Kıpır because a `CODE_SIGNING_ALLOWED=NO` build cannot register the app for notifications. No package installation is needed. The bundle ID is configurable in `Config.xcconfig`. Copy a personally built app from DerivedData to Applications if desired; distributed builds require appropriate signing/notarization. Respect corporate IT approval.
@@ -34,13 +36,13 @@ Quit Kıpır before updating, then run `brew update` and
 See [DISTRIBUTION.md](DISTRIBUTION.md) for packaging and release steps.
 
 ## Configuration and permissions
-Open **Settings** from the panel. Configure durations, notifications, sound, appearance, language (Türkçe / English) and launch at login. Language changes apply immediately and persist locally. Notification authorization is requested only by the explicit permission button. Idle detection reads aggregate seconds since input; no Accessibility or Input Monitoring request is made. Login registration uses Apple's ServiceManagement and can fail under policy; errors appear in Settings.
+Open **Settings** from the panel. Configure timing and break lengths (preset choices), natural break, exercise focus, working hours, notifications, sound, appearance, language (Türkçe / English), menu bar style and launch at login. Language changes apply immediately and persist locally. Notification authorization is requested only by an explicit button (first-run welcome step 2, or Settings → Notifications); diagnostics and the test notification are in a collapsed section there. Idle detection reads aggregate seconds since input; no Accessibility or Input Monitoring request is made. Login registration uses Apple's ServiceManagement and can fail under policy; errors appear in Settings.
 
 ## Screenshots
 Run the app, open its menu panel, and use macOS Screenshot (Shift-Command-5). Capture working, due and break states in both system appearances. Do not include personal desktop content. No screenshot is claimed until captured.
 
 ## Limitations and roadmap
-Idle is a proxy: reading without input is not confirmed work. Up to the AFK threshold of recent input-free time is provisional and credited only when another event confirms a short gap. Meeting Mode explicitly excludes meetings. Offline time never advances work or break completion. One current local-day aggregate is retained. See [TESTING.md](TESTING.md) for actual results and outstanding device checks. Future scope: distribution hardening, not cloud or productivity scores.
+Idle is a proxy: reading without input is not confirmed work. Up to the AFK threshold of recent input-free time is provisional and credited only when another event confirms a short gap. Meeting Mode explicitly excludes meetings. Offline time never advances work or break completion. One current local-day aggregate is retained. See [TESTING.md](TESTING.md) for actual results and outstanding device checks. Natural break and working hours are conservative proxies, not proof of rest or of a work schedule. Future scope: distribution hardening, not cloud or productivity scores. 0.2.0 is unreleased; its device, visual and accessibility acceptance is pending (see TESTING.md).
 
 ## Repository
 Repository identity: `kipir-macos` (this local checkout may use a shorter folder name).
@@ -48,10 +50,10 @@ Repository identity: `kipir-macos` (this local checkout may use a shorter folder
 `Kipir/Core` is Foundation-only scheduling, validation and persistence. `Kipir/App` adapts native lifecycle/notifications. `Kipir/UI` contains native views. `KipirTests` runs the same core through Xcode and Swift Package Manager. Product requirements, architecture, design, decisions, security and delivery checklist live in the root Markdown files.
 
 ## Animated movement guide
-Starting a break displays guidance directly in the menu bar popover with instructions in the selected language, a joint-based animated figure, per-movement countdown, overall progress and keyboard controls (left/right, Space). Short breaks use four 30-second movements; long breaks add a three-minute walk. Custom break durations scale the sequence proportionally. Dismiss the popover to continue away from the screen; click the menu bar icon to return. Move gently and stop if uncomfortable.
+Starting a break displays guidance directly in the menu bar popover with instructions in the selected language, a flat vector figure, per-movement countdown, overall progress and keyboard controls (left/right, Space). The catalog has 11 movements in four body areas (neck and shoulders, back, hands, legs) plus a closing walk. Breaks use movements of about 30 seconds; the choice rotates deterministically from break to break (no randomness) and can be steered with Settings → Breaks → Exercise focus (all, neck and shoulders, back, hands). Long breaks end with a walk for about 60% of their length. Custom break durations scale the sequence proportionally. Reduce Motion shows two labeled still poses. Dismiss the popover to continue away from the screen; click the menu bar icon to return. Move gently and stop if uncomfortable. Illustration review by a person is still pending.
 
 ## Everyday controls
-The menu bar shows ceiling-rounded remaining minutes, or a localized break/meeting state. Idle keeps the frozen remaining time with a moon symbol; manual pause and system suspension have distinct symbols. All updates use the existing heartbeat.
+The menu bar shows ceiling-rounded remaining minutes, or a localized break/meeting/off-hours state (Settings → General → Menu bar style can show the icon only; the tooltip and VoiceOver always carry the full state). Idle keeps the frozen remaining time with a moon symbol; manual pause and system suspension have distinct symbols. All updates use the existing heartbeat.
 
 Settings → Timing offers Quick Focus (25/1/5 minutes, long after 3 short breaks, 90-second AFK, 5-minute active snooze), Balanced (45/2/5, 3, 90 seconds, 10-minute snooze), and derived Custom status. Applying a preset keeps current break duration, today's totals and an existing snooze target.
 

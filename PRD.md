@@ -20,7 +20,7 @@ Acceptance: automated tests cover all scheduler transitions and persistence edge
 Other platforms, AI, accounts, sync, application tracking, productivity scores, social features, subscriptions, exercise verification and web dashboards. Turkish and English use the existing localization resources.
 
 ## Exercise guidance acceptance
-Breaks present shoulder rolls, chest opening, gentle wrist stretching and supported calf raises; long breaks end with walking away. The guide supports previous/next, skip, pause/resume and early finish. The guide is embedded in the existing menu bar popover; dismissing it preserves the break. AFK never pauses the break, but sleep, meeting and manual pause do. Automated acceptance covers order, scaled durations, transitions, integration and single completion. Recognizability, VoiceOver and appearance need human acceptance; illustration is not medical or exercise-performance validation.
+Breaks present rotating movements for neck and shoulders, back, hands and legs (11 in the catalog, see DECISIONS 024); long breaks end with walking away. The guide supports previous/next, skip, pause/resume and early finish. The guide is embedded in the existing menu bar popover; dismissing it preserves the break. AFK never pauses the break, but sleep, meeting and manual pause do. Automated acceptance covers order, scaled durations, transitions, integration and single completion. Recognizability, VoiceOver and appearance need human acceptance; illustration is not medical or exercise-performance validation.
 
 ## Quality of life — 2026-10-31
 - Menu bar presents ceiling-rounded work/break minutes and distinct due/idle/paused/meeting/suspended states, through the existing heartbeat with an accessible localized description.
@@ -31,3 +31,11 @@ Breaks present shoulder rolls, chest opening, gentle wrist stretching and suppor
 - Existing serialized settings/checkpoints without new fields remain readable. New malformed fields recover locally without resetting otherwise valid user state. Device delivery/audio/accessibility acceptance stays separate.
 
 Notification visibility acceptance: distinguish full desktop alert eligibility, center-only delivery, provisional/quiet, denied and unknown settings; show localized actionable guidance and a notification-settings opener. Foreground requests banner/list with optional configured sound. Test notification acceptance is not evidence of an on-screen banner. Focus and user preferences must remain respected.
+
+## 0.2 additions (unreleased)
+- Natural break: a verified no-input span (Off/5/10/15 min, default 10; effective threshold never below AFK plus 60 s) restarts the work interval and withdraws a due reminder without counting a completed break.
+- Optional working hours (weekdays, start, end, overnight) suppress credit, Due transitions, natural-break accrual and reminders outside the window.
+- Menu bar style (timer or icon), per-state status notes, break-length presets with a non-destructive Custom row, and a transient completion/natural-break notice.
+- Notification state is shown as off, needs permission, denied, limited or active with a single primary action; first run is a two-step popover welcome.
+- Exercise guide: 11 movements in four body areas, deterministic rotation, optional body-area focus, flat vector key-pose artwork.
+- Acceptance: automated results are in TESTING.md; device, visual, VoiceOver, notification-delivery, movement-review and Turkish-copy acceptance remain pending.
