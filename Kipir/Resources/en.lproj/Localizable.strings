@@ -113,3 +113,20 @@
 "notification.sound.enabled" = "System notification sound: enabled";
 "notification.sound.disabled" = "System notification sound: disabled or unavailable";
 "notification.test.submittedQuiet" = "macOS accepted the test request; desktop alerts are disabled or authorization is quiet. Check notification settings. This does not confirm visible delivery.";
+
+/* ==== 0.2 contracts (orchestrator) ==== */
+"status.offHours" = "Off hours";
+"menubar.offHours" = "Off hours";
+
+/* ==== Scheduler workstream: add keys only between these markers ==== */
+/* ==== end scheduler workstream ==== */
+
+/* ---- separator: do not edit ---- */
+
+/* ==== Exercise workstream: add keys only between these markers ==== */
+/* ==== end exercise workstream ==== */
+
+/* ---- separator: do not edit ---- */
+
+/* ==== UI workstream: add keys only between these markers ==== */
+/* ==== end UI workstream ==== */

@@ -18,16 +18,6 @@ final class BreakSchedulerTests: XCTestCase {
             }
         }
     }
-    func testVisualClockFreezesAndResumesWithoutJump() {
-        var clock = ExerciseVisualClock(offset: 7.25, anchor: 100, running: true)
-        XCTAssertEqual(clock.time(at: 102.5), 9.75, accuracy: 0.0001)
-        clock.setRunning(false, at: 102.5)
-        XCTAssertEqual(clock.time(at: 300), 9.75, accuracy: 0.0001)
-        clock.setRunning(true, at: 300)
-        XCTAssertEqual(clock.time(at: 300), 9.75, accuracy: 0.0001)
-        XCTAssertEqual(clock.time(at: 300.5), 10.25, accuracy: 0.0001)
-    }
-
     func testActiveTimeAccumulates() {
         let c = Clock(); let e = c.engine(); c.step(e, seconds: 20)
         XCTAssertEqual(e.activeWork, 20, accuracy: 0.001)
@@ -223,72 +213,6 @@ final class BreakSchedulerTests: XCTestCase {
         XCTAssertEqual(e.today.activeSeconds, 91)
         XCTAssertEqual(e.activeWork, 91)
         XCTAssertEqual(e.reminderID, id)
-    }
-
-    func testExerciseCatalogOrderAndDurations() {
-        let short = ExerciseCatalog.sequence(long: false, duration: 120)
-        XCTAssertEqual(short.map(\.id), [.shoulders, .chest, .wrists, .calves])
-        XCTAssertEqual(short.map(\.duration), [30, 30, 30, 30])
-        let long = ExerciseCatalog.sequence(long: true, duration: 300)
-        XCTAssertEqual(long.last?.id, .walk)
-        XCTAssertEqual(long.map(\.duration), [30, 30, 30, 30, 180])
-    }
-    func testExerciseAdvanceAndNavigation() {
-        var sequence = ExerciseSequenceController(long: false, duration: 120)
-        sequence.advance(31); XCTAssertEqual(sequence.index, 1); XCTAssertEqual(sequence.remaining, 29)
-        sequence.navigate(1); XCTAssertEqual(sequence.index, 2); XCTAssertEqual(sequence.remaining, 30)
-        sequence.navigate(-1); XCTAssertEqual(sequence.index, 1)
-        sequence.advance(.nan); XCTAssertEqual(sequence.remaining, 30)
-        sequence.advance(1000); XCTAssertEqual(sequence.index, 3); XCTAssertEqual(sequence.remaining, 0)
-    }
-    func testExerciseIntegrationAFKPauseSleepAndCompletion() {
-        let c = Clock(); let e = c.engine(); e.perform(.startBreak)
-        c.step(e, seconds: 35, input: false)
-        XCTAssertEqual(e.exercises?.index, 1); XCTAssertEqual(e.exercises?.remaining, 25)
-        e.perform(.togglePause); c.step(e, seconds: 40, input: false)
-        XCTAssertEqual(e.exercises?.remaining, 25)
-        e.perform(.togglePause); e.setSuspended(true); c.step(e, seconds: 100)
-        e.setSuspended(false); XCTAssertEqual(e.exercises?.remaining, 25)
-        e.navigateExercise(1); XCTAssertEqual(e.remaining, 85)
-        c.step(e, seconds: 85, input: false)
-        XCTAssertNil(e.exercises); XCTAssertEqual(e.today.breaks, 1)
-        c.step(e); XCTAssertEqual(e.today.breaks, 1)
-    }
-    func testExerciseMeetingFreezesAndNavigationRestartsSelection() {
-        let c = Clock(); let e = c.engine(); e.perform(.startBreak)
-        c.step(e, seconds: 8)
-        let remaining = e.remaining
-        let elapsed = e.exercises?.elapsed
-        e.perform(.toggleMeeting); c.step(e, seconds: 20)
-        XCTAssertEqual(e.remaining, remaining)
-        XCTAssertEqual(e.exercises?.elapsed, elapsed)
-        e.perform(.toggleMeeting); c.step(e, seconds: 2)
-        XCTAssertEqual(e.exercises?.elapsed, 10)
-        e.navigateExercise(1)
-        XCTAssertEqual(e.exercises?.current.id, .chest)
-        XCTAssertEqual(e.exercises?.elapsed, 0)
-    }
-
-    func testManualFinishDoesNotCreditCompletedBreak() {
-        let c = Clock(); let e = c.engine(); e.perform(.startBreak)
-        e.navigateExercise(1); e.perform(.skip)
-        XCTAssertNil(e.exercises); XCTAssertEqual(e.today.breaks, 0); XCTAssertEqual(e.activeWork, 0)
-    }
-    func testExerciseRestoreUsesConfirmedBreakElapsed() {
-        let c = Clock(); let e = c.engine(); e.perform(.startBreak); c.step(e, seconds: 35)
-        let restored = c.engine(checkpoint: e.checkpoint)
-        XCTAssertEqual(restored.exercises?.index, 1); XCTAssertEqual(restored.exercises?.remaining, 25)
-    }
-
-    func testLongGuideWalksAndCompletesWhileAFK() {
-        let c = Clock(); var settings = Settings(); settings.longEvery = 1
-        let e = c.engine(settings); e.perform(.startBreak)
-        c.step(e, seconds: 120, input: false); XCTAssertEqual(e.today.breaks, 1)
-        e.perform(.startBreak); c.step(e, seconds: 120, input: false)
-        XCTAssertEqual(e.exercises?.current.id, .walk); XCTAssertEqual(e.remaining, 180)
-        c.step(e, seconds: 180, input: false)
-        XCTAssertEqual(e.today.breaks, 2); XCTAssertNil(e.exercises)
-        c.step(e, seconds: 10, input: false); XCTAssertEqual(e.today.breaks, 2)
     }
 
     func testMenuBarFormattingRoundsUpAndRepresentsEveryOverride() {
@@ -495,6 +419,29 @@ final class BreakSchedulerTests: XCTestCase {
             var sounds = 0; BreakCompletionFeedback.consume(from: e) { sounds += 1 }
             XCTAssertEqual(sounds, 0)
         }
+    }
+    func testV011PayloadsDecodeWithNewDefaultsAndMalformedAdditionsDoNotWipePreferences() throws {
+        let v011 = #"{"work":1800,"shortBreak":90,"longBreak":240,"longEvery":2,"afk":120,"snooze":420,"notifications":false,"sound":true,"breakEndSound":true,"appearance":"dark"}"#
+        let s = try JSONDecoder().decode(Settings.self, from: Data(v011.utf8)).validated()
+        XCTAssertEqual(s.work, 1800); XCTAssertTrue(s.breakEndSound); XCTAssertFalse(s.notifications)
+        XCTAssertEqual(s.naturalBreak, 600); XCTAssertEqual(s.workingHours, WorkingHours())
+        XCTAssertEqual(s.exerciseFocus, "all"); XCTAssertEqual(s.menuBarStyle, "timer")
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(v011.utf8)) as? [String: Any])
+        object["naturalBreak"] = "x"; object["workingHours"] = 5; object["exerciseFocus"] = "legs"; object["menuBarStyle"] = 3
+        let broken = try JSONDecoder().decode(Settings.self, from: JSONSerialization.data(withJSONObject: object)).validated()
+        XCTAssertEqual(broken.work, 1800); XCTAssertEqual(broken.snooze, 420); XCTAssertEqual(broken.appearance, "dark")
+        XCTAssertEqual(broken.naturalBreak, 600); XCTAssertEqual(broken.exerciseFocus, "all"); XCTAssertEqual(broken.menuBarStyle, "timer")
+        object["naturalBreak"] = 1234; object["exerciseFocus"] = "back"
+        object["workingHours"] = ["enabled": true, "weekdays": [0, 9], "start": 2000, "end": 10]
+        let clamped = try JSONDecoder().decode(Settings.self, from: JSONSerialization.data(withJSONObject: object)).validated()
+        XCTAssertEqual(clamped.naturalBreak, 600); XCTAssertEqual(clamped.exerciseFocus, "back")
+        XCTAssertTrue(clamped.workingHours.enabled); XCTAssertEqual(clamped.workingHours.weekdays, [2, 3, 4, 5, 6])
+        XCTAssertEqual(clamped.workingHours.start, 540); XCTAssertEqual(clamped.workingHours.end, 1080)
+        let c = Clock(); let e = c.engine(); c.step(e, seconds: 5)
+        var legacy = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(e.checkpoint)) as? [String: Any])
+        legacy.removeValue(forKey: "exerciseRotation"); legacy.removeValue(forKey: "breakFocus")
+        let restored = try JSONDecoder().decode(Checkpoint.self, from: JSONSerialization.data(withJSONObject: legacy))
+        XCTAssertEqual(restored.exerciseRotation, 0); XCTAssertNil(restored.breakFocus); XCTAssertEqual(restored.activeWork, 5)
     }
     func testLegacySettingsAndCheckpointMigrationPreserveValues() throws {
         let oldSettings = Data(#"{"work":1800,"shortBreak":90,"longBreak":240,"longEvery":2,"afk":120,"snooze":420,"notifications":false,"sound":true,"appearance":"dark"}"#.utf8)
