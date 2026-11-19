@@ -6,24 +6,35 @@ final class BreakScheduler {
     private let now: () -> TimeInterval
     private let date: () -> Date
     private let idle: () -> TimeInterval
+    private let calendar: Calendar
     private var previousTime: TimeInterval?
     private var previousIdle: TimeInterval?
     private var pending: TimeInterval = 0
     private var naturalCompletionSound: Bool?
     private(set) var suspended = false
+    /// Whether the injected wall date lies inside the working window; refreshed on every tick.
+    private var inWindow = true
+    // Natural-break chain (DECISIONS 018). `awayOpen` is false while the chain is tainted: after a restart,
+    // an invalid/unknown gap, or any state that cannot accrue. Only an observed input opens a fresh chain.
+    private var awayOpen = false
+    private var away: TimeInterval = 0
+    private var naturalResetPending = false
+    private var naturalNoticeReady = false
+    private static let inputTolerance = 0.05
     var reminderID: UUID? {
-        saved.phase == .due && !paused && !meeting && !suspended ? saved.dueID : nil
+        saved.phase == .due && !paused && !meeting && !suspended && inWindow ? saved.dueID : nil
     }
     private var isIdle = false
     private(set) var exercises: ExerciseSequenceController?
 
     init(settings: Settings = Settings(), checkpoint: Checkpoint? = nil,
          now: @escaping () -> TimeInterval, date: @escaping () -> Date,
-         idle: @escaping () -> TimeInterval) {
+         idle: @escaping () -> TimeInterval, calendar: Calendar = .autoupdatingCurrent) {
         self.settings = settings.validated()
-        self.now = now; self.date = date; self.idle = idle
+        self.now = now; self.date = date; self.idle = idle; self.calendar = calendar
         saved = checkpoint.flatMap { $0.isValid ? $0 : nil } ??
-            Checkpoint(target: self.settings.work, today: DailyStats(day: Calendar.current.startOfDay(for: date())))
+            Checkpoint(target: self.settings.work, today: DailyStats(day: calendar.startOfDay(for: date())))
+        inWindow = self.settings.workingHours.contains(date(), calendar: calendar)
         if saved.phase == .onBreak { exercises = makeExercises(elapsed: saved.breakDuration - saved.breakRemaining) }
         rollover()
         reconcileMeeting()
@@ -54,6 +65,7 @@ final class BreakScheduler {
         if suspended { return .suspended }
         if paused { return .paused }
         if meeting { return .meeting }
+        if !inWindow && saved.phase != .onBreak { return .offHours }
         switch saved.phase {
         case .due: return .due
         case .onBreak: return .onBreak
@@ -66,15 +78,21 @@ final class BreakScheduler {
         let changedDay = rollover()
         defer { refreshReminder() }
         // Expiration resumes only from a fresh baseline, never credits the frozen crossing sample.
-        if reconcileMeeting() { baseline(); return }
+        if reconcileMeeting() { dropAwayChain(); baseline(); return }
+        // Entering or leaving the working window rebaselines like meeting expiration; the crossing sample is discarded.
+        // A break already in progress keeps counting down (DECISIONS 019), so its sample is not discarded.
+        if refreshWindow(), saved.phase != .onBreak { dropAwayChain(); baseline(); return }
         guard t.isFinite, i.isFinite, i >= 0 else {
-            pending = 0; previousTime = nil; previousIdle = nil; isIdle = true; return
+            pending = 0; previousTime = nil; previousIdle = nil; isIdle = true; dropAwayChain(); return
         }
         let oldTime = previousTime, oldIdle = previousIdle
         previousTime = t; previousIdle = i
         isIdle = i >= settings.afk
-        guard let oldTime, let oldIdle, !changedDay else { pending = 0; return }
+        guard let oldTime, let oldIdle else { pending = 0; dropAwayChain(); return }
         let delta = t - oldTime
+        // The away chain may continue across a day rollover; only work credit is withheld for that sample.
+        if trackAway(delta: delta, oldIdle: oldIdle, idle: i) { pending = 0; return }
+        guard !changedDay else { pending = 0; return }
         guard delta > 0, delta <= 10, !suspended, !paused, !meeting else { pending = 0; return }
         switch saved.phase {
         case .onBreak:
@@ -88,7 +106,7 @@ final class BreakScheduler {
                 resetInterval()
             }
         case .working, .due:
-            guard !isIdle else { pending = 0; return }
+            guard inWindow, !isIdle else { pending = 0; return }
             let eventGap = delta + oldIdle - i
             if eventGap > 0.001 {
                 // Confirm only spans bounded by input; a long AFK gap never earns its threshold.
@@ -107,6 +125,7 @@ final class BreakScheduler {
         switch action {
         case .startBreak:
             guard !paused, !meeting, !suspended, saved.phase != .onBreak else { return }
+            clearNaturalNotice()
             saved.isLongBreak = nextBreakIsLong
             saved.breakDuration = saved.isLongBreak ? settings.longBreak : settings.shortBreak
             saved.breakRemaining = saved.breakDuration
@@ -119,21 +138,24 @@ final class BreakScheduler {
             saved.target = saved.activeWork + settings.snooze
             saved.snoozed = true; saved.phase = .working
         case .skip:
-            naturalCompletionSound = nil
+            naturalCompletionSound = nil; clearNaturalNotice()
             guard saved.phase == .due || saved.phase == .onBreak else { return }
             resetInterval()
         case .togglePause: naturalCompletionSound = nil; saved.paused.toggle()
         case .toggleMeeting: naturalCompletionSound = nil; saved.meeting.toggle(); saved.meetingDeadline = nil
         case .reset:
-            naturalCompletionSound = nil
+            naturalCompletionSound = nil; clearNaturalNotice()
             resetInterval(); saved.completedShorts = 0; saved.paused = false; saved.meeting = false; saved.meetingDeadline = nil
         }
         baseline(); refreshReminder()
     }
 
-    /// Ephemeral event (contract for the natural-break workstream): true exactly once after the scheduler
-    /// reset the work interval because of a verified natural break. Never persisted.
-    func consumeNaturalBreak() -> Bool { false }
+    /// Ephemeral event: true exactly once after the scheduler reset the work interval because of a verified
+    /// natural break, delivered on the first input observed after the reset. Never persisted.
+    func consumeNaturalBreak() -> Bool {
+        defer { naturalNoticeReady = false }
+        return naturalNoticeReady
+    }
 
     // Ephemeral event: nil means no completion; Bool captures the preference at completion.
     func consumeBreakCompletion() -> Bool? {
@@ -170,9 +192,11 @@ final class BreakScheduler {
 
     func updateSettings(_ value: Settings) {
         tick(); settings = value.validated()
+        inWindow = settings.workingHours.contains(date(), calendar: calendar)
         if !saved.snoozed && saved.phase != .onBreak {
             saved.target = settings.work
-            saved.phase = activeWork >= saved.target ? .due : .working
+            // Off hours never starts a Due episode, but an existing one is preserved.
+            saved.phase = activeWork >= saved.target && (inWindow || saved.phase == .due) ? .due : .working
         }
         baseline(); refreshReminder()
     }
@@ -190,13 +214,71 @@ final class BreakScheduler {
     }
     private func baseline() {
         let t = now(), i = idle()
+        let oldTime = previousTime, oldIdle = previousIdle
         previousTime = t.isFinite ? t : nil
         previousIdle = i.isFinite && i >= 0 ? i : nil
         isIdle = !i.isFinite || i < 0 || i >= settings.afk
         pending = 0
+        // The discarded crossing sample must not hide input from the away chain (for example the unlock keypress).
+        guard t.isFinite, i.isFinite, i >= 0 else { dropAwayChain(); return }
+        var gapKnown = false, inputSeen = false
+        if let oldTime, let oldIdle, t >= oldTime {
+            let gap = t - oldTime
+            gapKnown = gap <= 10
+            inputSeen = i < oldIdle + gap - Self.inputTolerance
+        }
+        // With no input since the chain opened, idle is at least the verified away time.
+        if awayOpen && i + Self.inputTolerance < away { inputSeen = true }
+        if suspended { inputSeen = false }
+        if inputSeen { awayOpen = true; away = 0; armNaturalNotice() }
+        else if !gapKnown { dropAwayChain() }
+        if !canAccrueAway { dropAwayChain() }
+    }
+    private var canAccrueAway: Bool {
+        (saved.phase == .working || saved.phase == .due) && !paused && !meeting && inWindow
+    }
+    private func dropAwayChain() { awayOpen = false; away = 0 }
+    private func armNaturalNotice() {
+        if naturalResetPending { naturalResetPending = false; naturalNoticeReady = true }
+    }
+    private func clearNaturalNotice() { naturalResetPending = false; naturalNoticeReady = false }
+    /// Returns true when this sample reset the work interval.
+    private func trackAway(delta: TimeInterval, oldIdle: TimeInterval, idle i: TimeInterval) -> Bool {
+        let inputSeen = delta > 0 && i < oldIdle + delta - Self.inputTolerance
+        let validDelta = delta > 0 && delta <= 10
+        // A repeated sample at the same instant (perform/save right after a heartbeat) carries no information.
+        if delta == 0 { return false }
+        guard canAccrueAway else {
+            dropAwayChain()
+            if inputSeen { armNaturalNotice() }
+            return false
+        }
+        if suspended {
+            // Lock, display-off and inactive sessions keep the heartbeat but cannot be user input.
+            if validDelta && awayOpen { away += delta; return applyNaturalBreak() }
+            dropAwayChain(); return false
+        }
+        if inputSeen { awayOpen = true; away = 0; armNaturalNotice(); return false }
+        if validDelta && awayOpen { away += delta; return applyNaturalBreak() }
+        dropAwayChain()
+        return false
+    }
+    private func applyNaturalBreak() -> Bool {
+        guard settings.naturalBreak > 0, away >= max(settings.naturalBreak, settings.afk + 60) else { return false }
+        guard saved.activeWork > 0 || saved.phase == .due || saved.snoozed else { return false }
+        resetInterval()
+        pending = 0
+        naturalResetPending = true; naturalNoticeReady = false
+        return true
+    }
+    @discardableResult private func refreshWindow() -> Bool {
+        let value = settings.workingHours.contains(date(), calendar: calendar)
+        guard value != inWindow else { return false }
+        inWindow = value
+        return true
     }
     @discardableResult private func rollover() -> Bool {
-        let day = Calendar.current.startOfDay(for: date())
+        let day = calendar.startOfDay(for: date())
         guard day != saved.today.day else { return false }
         saved.today = DailyStats(day: day); pending = 0; return true
     }

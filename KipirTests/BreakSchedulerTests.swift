@@ -8,9 +8,10 @@ final class BreakSchedulerTests: XCTestCase {
         var time: Double = 0
         var idle: Double = 0
         var date = Date(timeIntervalSince1970: 1_800_014_400)
+        var calendar = Calendar.current
         func engine(_ settings: Settings = Settings(), checkpoint: Checkpoint? = nil) -> BreakScheduler {
             BreakScheduler(settings: settings, checkpoint: checkpoint,
-                           now: { self.time }, date: { self.date }, idle: { self.idle })
+                           now: { self.time }, date: { self.date }, idle: { self.idle }, calendar: calendar)
         }
         func step(_ engine: BreakScheduler, seconds: Int = 1, input: Bool = true) {
             for _ in 0..<seconds {
@@ -24,7 +25,10 @@ final class BreakSchedulerTests: XCTestCase {
         XCTAssertEqual(e.today.activeSeconds, 20)
     }
     func testAFKDoesNotCreditThresholdAndResumes() {
-        let c = Clock(); let e = c.engine(); c.step(e, seconds: 20)
+        // Natural break disabled: a 600 s no-input span is exactly the 0.2 default threshold (DECISIONS 018) and
+        // would reset the interval; this test isolates the AFK-only 0.1 behavior.
+        var s = Settings(); s.naturalBreak = 0
+        let c = Clock(); let e = c.engine(s); c.step(e, seconds: 20)
         c.step(e, seconds: 600, input: false)
         XCTAssertEqual(e.activeWork, 20); XCTAssertEqual(e.status, .idle)
         c.step(e); XCTAssertEqual(e.activeWork, 21)
@@ -152,7 +156,10 @@ final class BreakSchedulerTests: XCTestCase {
         XCTAssertEqual(restored.reminderID, id)
     }
     func testSleepDoesNotCreditWorkOnWake() {
-        let c = Clock(); let e = c.engine(); c.step(e, seconds: 20)
+        // Natural break disabled: this models sleep as 900 s of suspended monotonic time, which DECISIONS 018
+        // counts as verified away time. Real sleep stops uptime (see NaturalBreakTests sleep tests).
+        var s = Settings(); s.naturalBreak = 0
+        let c = Clock(); let e = c.engine(s); c.step(e, seconds: 20)
         e.setSuspended(true); c.step(e, seconds: 900); e.setSuspended(false)
         XCTAssertEqual(e.activeWork, 20)
         c.step(e); XCTAssertEqual(e.activeWork, 21)
