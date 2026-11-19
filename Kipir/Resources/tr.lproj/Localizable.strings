@@ -114,3 +114,20 @@
 "notification.sound.enabled" = "Sistem bildirim sesi: açık";
 "notification.sound.disabled" = "Sistem bildirim sesi: kapalı veya kullanılamıyor";
 "notification.test.submittedQuiet" = "Test isteği macOS tarafından kabul edildi; ekran uyarıları açık değil veya izin sessiz. Bildirim ayarlarını kontrol et. Bu sonuç görünür teslimi doğrulamaz.";
+
+/* ==== 0.2 contracts (orchestrator) ==== */
+"status.offHours" = "Mesai dışı";
+"menubar.offHours" = "Mesai dışı";
+
+/* ==== Scheduler workstream: add keys only between these markers ==== */
+/* ==== end scheduler workstream ==== */
+
+/* ---- separator: do not edit ---- */
+
+/* ==== Exercise workstream: add keys only between these markers ==== */
+/* ==== end exercise workstream ==== */
+
+/* ---- separator: do not edit ---- */
+
+/* ==== UI workstream: add keys only between these markers ==== */
+/* ==== end UI workstream ==== */

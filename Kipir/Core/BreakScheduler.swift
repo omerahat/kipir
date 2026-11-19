@@ -24,7 +24,7 @@ final class BreakScheduler {
         self.now = now; self.date = date; self.idle = idle
         saved = checkpoint.flatMap { $0.isValid ? $0 : nil } ??
             Checkpoint(target: self.settings.work, today: DailyStats(day: Calendar.current.startOfDay(for: date())))
-        if saved.phase == .onBreak { exercises = ExerciseSequenceController(long: saved.isLongBreak, duration: saved.breakDuration, elapsed: saved.breakDuration - saved.breakRemaining) }
+        if saved.phase == .onBreak { exercises = makeExercises(elapsed: saved.breakDuration - saved.breakRemaining) }
         rollover()
         reconcileMeeting()
         baseline()
@@ -111,7 +111,9 @@ final class BreakScheduler {
             saved.breakDuration = saved.isLongBreak ? settings.longBreak : settings.shortBreak
             saved.breakRemaining = saved.breakDuration
             saved.phase = .onBreak
-            exercises = ExerciseSequenceController(long: saved.isLongBreak, duration: saved.breakDuration)
+            saved.exerciseRotation = saved.exerciseRotation >= 1_000_000 ? 0 : saved.exerciseRotation + 1
+            saved.breakFocus = settings.exerciseFocus
+            exercises = makeExercises(elapsed: 0)
         case .snooze:
             guard saved.phase == .due, !paused, !meeting, !suspended else { return }
             saved.target = saved.activeWork + settings.snooze
@@ -128,6 +130,10 @@ final class BreakScheduler {
         }
         baseline(); refreshReminder()
     }
+
+    /// Ephemeral event (contract for the natural-break workstream): true exactly once after the scheduler
+    /// reset the work interval because of a verified natural break. Never persisted.
+    func consumeNaturalBreak() -> Bool { false }
 
     // Ephemeral event: nil means no completion; Bool captures the preference at completion.
     func consumeBreakCompletion() -> Bool? {
@@ -177,6 +183,11 @@ final class BreakScheduler {
         exercises?.navigate(offset)
     }
 
+    private func makeExercises(elapsed: Double) -> ExerciseSequenceController {
+        ExerciseSequenceController(long: saved.isLongBreak, duration: saved.breakDuration,
+                                   focus: ExerciseFocus(rawValue: saved.breakFocus ?? "all") ?? .all,
+                                   rotation: saved.exerciseRotation, elapsed: elapsed)
+    }
     private func baseline() {
         let t = now(), i = idle()
         previousTime = t.isFinite ? t : nil

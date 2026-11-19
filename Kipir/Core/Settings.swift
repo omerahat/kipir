@@ -11,6 +11,16 @@ struct Settings: Codable, Equatable {
     var sound = false
     var breakEndSound = false
     var appearance = "system"
+    // 0.2 additions. Every new key decodes leniently so 0.1.x payloads keep all existing values.
+    /// Verified no-input span that counts as a natural break; 0 disables. Allowed: 0, 300, 600, 900.
+    var naturalBreak: TimeInterval = 600
+    var workingHours = WorkingHours()
+    /// Raw value of `ExerciseFocus`.
+    var exerciseFocus = "all"
+    /// "timer" (icon + remaining minutes) or "icon" (icon only).
+    var menuBarStyle = "timer"
+
+    static let naturalBreakOptions: [TimeInterval] = [0, 300, 600, 900]
 
     func validated() -> Settings {
         var s = self
@@ -24,6 +34,10 @@ struct Settings: Codable, Equatable {
         s.snooze = valid(snooze, 60...3600, 600)
         s.longEvery = (1...10).contains(longEvery) ? longEvery : 3
         s.appearance = ["system", "light", "dark"].contains(appearance) ? appearance : "system"
+        s.naturalBreak = Settings.naturalBreakOptions.contains(naturalBreak) ? naturalBreak : 600
+        s.workingHours = workingHours.validated()
+        s.exerciseFocus = ExerciseFocus(rawValue: exerciseFocus) == nil ? "all" : exerciseFocus
+        s.menuBarStyle = ["timer", "icon"].contains(menuBarStyle) ? menuBarStyle : "timer"
         return s
     }
 }
@@ -35,7 +49,7 @@ struct DailyStats: Codable, Equatable {
 }
 
 enum Phase: String, Codable { case working, due, onBreak }
-enum WorkStatus: String { case working, idle, paused, meeting, due, onBreak, suspended }
+enum WorkStatus: String { case working, idle, paused, meeting, due, onBreak, suspended, offHours }
 enum SchedulerAction { case startBreak, snooze, skip, togglePause, toggleMeeting, reset }
 
 struct Checkpoint: Codable {
@@ -52,6 +66,10 @@ struct Checkpoint: Codable {
     var snoozed = false
     var dueID: UUID?
     var today: DailyStats
+    /// Rotation index of the current/most recent guided break; restored breaks rebuild the same sequence.
+    var exerciseRotation = 0
+    /// `ExerciseFocus` raw value captured when the current break started.
+    var breakFocus: String?
 
     var isValid: Bool {
         activeWork.isFinite && (0...1_000_000_000).contains(activeWork) &&
@@ -60,7 +78,8 @@ struct Checkpoint: Codable {
         breakDuration.isFinite && (10...3600).contains(breakDuration) && breakRemaining <= breakDuration &&
         (0...10).contains(completedShorts) && today.day.timeIntervalSince1970.isFinite &&
         today.activeSeconds.isFinite && (0...172800).contains(today.activeSeconds) &&
-        (0...10000).contains(today.breaks) && (phase != .onBreak || breakRemaining > 0)
+        (0...10000).contains(today.breaks) && (phase != .onBreak || breakRemaining > 0) &&
+        (0...1_000_000).contains(exerciseRotation)
     }
 }
 
@@ -70,70 +89,11 @@ struct NotificationPolicy {
     }
 }
 
-struct ExerciseDefinition: Identifiable {
-    enum Movement: String { case shoulders, chest, wrists, calves, walk }
-    let id: Movement
-    let duration: Double
-    let area: String
-    var nameKey: String { "exercise." + id.rawValue }
-    var instructionKey: String { nameKey + ".instruction" }
-}
-
-enum ExerciseCatalog {
-    static func sequence(long: Bool, duration: Double) -> [ExerciseDefinition] {
-        let movements: [ExerciseDefinition.Movement] = long ? [.shoulders, .chest, .wrists, .calves, .walk] : [.shoulders, .chest, .wrists, .calves]
-        let areas = ["shoulders", "chest", "wrists", "legs", "whole"]
-        return movements.enumerated().map { index, movement in
-            ExerciseDefinition(id: movement, duration: (index == 4 ? 180 : 30) * duration / (long ? 300 : 120), area: areas[index])
-        }
-    }
-}
-
-struct ExerciseSequenceController {
-    let exercises: [ExerciseDefinition]
-    private(set) var index = 0
-    private(set) var elapsed: Double = 0
-    var current: ExerciseDefinition { exercises[index] }
-    var remaining: Double { max(0, current.duration - elapsed) }
-    init(long: Bool, duration: Double, elapsed: Double = 0) {
-        exercises = ExerciseCatalog.sequence(long: long, duration: duration)
-        advance(elapsed)
-    }
-    mutating func advance(_ seconds: Double) {
-        guard seconds.isFinite, seconds > 0 else { return }
-        elapsed += seconds
-        while elapsed >= current.duration && index < exercises.count - 1 {
-            elapsed -= current.duration
-            index += 1
-        }
-        elapsed = min(elapsed, current.duration)
-    }
-    mutating func navigate(_ offset: Int) {
-        index = min(exercises.count - 1, max(0, index + offset)); elapsed = 0
-    }
-}
-
-// Visual playback owns no timer and never updates the scheduler.
-struct ExerciseVisualClock {
-    private(set) var offset: Double
-    private(set) var anchor: Double
-    private(set) var running: Bool
-
-    func time(at now: Double) -> Double {
-        offset + (running ? max(0, now - anchor) : 0)
-    }
-    mutating func setRunning(_ value: Bool, at now: Double) {
-        offset = time(at: now)
-        anchor = now
-        running = value
-    }
-}
-
 // Missing deadline means legacy indefinite mode; a malformed new field must not wipe a session.
 extension Checkpoint {
     private enum CodingKeys: String, CodingKey {
         case activeWork, target, phase, breakRemaining, breakDuration, completedShorts, isLongBreak
-        case paused, meeting, meetingDeadline, snoozed, dueID, today
+        case paused, meeting, meetingDeadline, snoozed, dueID, today, exerciseRotation, breakFocus
     }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -151,12 +111,15 @@ extension Checkpoint {
         today = try c.decode(DailyStats.self, forKey: .today)
         do { meetingDeadline = try c.decodeIfPresent(Date.self, forKey: .meetingDeadline) }
         catch { meetingDeadline = nil; meeting = false }
+        exerciseRotation = (try? c.decodeIfPresent(Int.self, forKey: .exerciseRotation)) ?? 0
+        breakFocus = (try? c.decodeIfPresent(String.self, forKey: .breakFocus)) ?? nil
     }
 }
 
 extension Settings {
     private enum CodingKeys: String, CodingKey {
         case work, shortBreak, longBreak, longEvery, afk, snooze, notifications, sound, breakEndSound, appearance
+        case naturalBreak, workingHours, exerciseFocus, menuBarStyle
     }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -170,5 +133,9 @@ extension Settings {
         sound = try c.decode(Bool.self, forKey: .sound)
         appearance = try c.decode(String.self, forKey: .appearance)
         breakEndSound = (try? c.decodeIfPresent(Bool.self, forKey: .breakEndSound)) ?? false
+        naturalBreak = (try? c.decodeIfPresent(Double.self, forKey: .naturalBreak)) ?? 600
+        workingHours = (try? c.decodeIfPresent(WorkingHours.self, forKey: .workingHours)) ?? WorkingHours()
+        exerciseFocus = (try? c.decodeIfPresent(String.self, forKey: .exerciseFocus)) ?? "all"
+        menuBarStyle = (try? c.decodeIfPresent(String.self, forKey: .menuBarStyle)) ?? "timer"
     }
 }

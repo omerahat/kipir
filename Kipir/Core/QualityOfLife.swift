@@ -10,6 +10,7 @@ struct MenuBarStatusFormatter {
         case .meeting: return "person.2"
         case .idle: return "moon"
         case .suspended: return "powersleep"
+        case .offHours: return "moon.zzz"
         case .due: return "figure.walk.circle.fill"
         default: return "figure.walk"
         }
@@ -21,6 +22,7 @@ struct MenuBarStatusFormatter {
         case .onBreak: return "menubar.break"
         case .meeting: return "menubar.meeting"
         case .suspended: return "menubar.suspended"
+        case .offHours: return "menubar.offHours"
         case .paused: return nil
         }
     }
