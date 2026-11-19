@@ -1,28 +1,115 @@
 import Foundation
 
+/// Body areas used for focus preference and rotation balance. `whole` is reserved for the long-break walk.
+enum BodyArea: String, CaseIterable {
+    case neckShoulders, back, hands, legs, whole
+}
+
 struct ExerciseDefinition: Identifiable {
-    enum Movement: String { case shoulders, chest, wrists, calves, walk }
+    enum Movement: String, CaseIterable {
+        case shoulders, chest, wrists, calves, walk
+        case neckTilt, shrug, upperBack, twist, fingers, march
+
+        var area: BodyArea {
+            switch self {
+            case .shoulders, .shrug, .neckTilt: return .neckShoulders
+            case .chest, .upperBack, .twist: return .back
+            case .wrists, .fingers: return .hands
+            case .calves, .march: return .legs
+            case .walk: return .whole
+            }
+        }
+        /// Natural length of one visual cycle in seconds (fitted to the real duration by `loopPeriod`).
+        var basePeriod: Double {
+            switch self {
+            case .walk, .march: return 2
+            case .wrists, .fingers: return 5
+            default: return 6
+            }
+        }
+    }
     let id: Movement
     let duration: Double
-    let area: String
+    var area: BodyArea { id.area }
     var nameKey: String { "exercise." + id.rawValue }
     var instructionKey: String { nameKey + ".instruction" }
+
+    /// Visual loop length that divides `duration` into an even number of equal cycles, so a halfway
+    /// change (wrist hand switch) lands on a loop boundary. Falls back to `basePeriod` for bad input.
+    var loopPeriod: Double { ExerciseDefinition.loopPeriod(duration: duration, base: id.basePeriod) }
+    static func loopPeriod(duration: Double, base: Double) -> Double {
+        guard duration.isFinite, duration > 0, base.isFinite, base > 0 else { return max(1, base.isFinite ? base : 4) }
+        let pairs = max(1, (duration / (2 * base)).rounded())
+        return max(1, duration / (2 * pairs))
+    }
 }
 
 /// Body-area preference raw values are part of the persisted Settings contract.
 enum ExerciseFocus: String, CaseIterable {
     case all, neckShoulders, back, hands
+    var area: BodyArea? {
+        switch self {
+        case .all: return nil
+        case .neckShoulders: return .neckShoulders
+        case .back: return .back
+        case .hands: return .hands
+        }
+    }
 }
 
 enum ExerciseCatalog {
-    /// Contract: deterministic for equal inputs. `rotation` comes from the persisted checkpoint so a
-    /// restored break rebuilds the identical sequence. Durations must sum to `duration`.
+    typealias Movement = ExerciseDefinition.Movement
+    /// Rotating movements per area, in catalog order. The walk is only ever the closing long-break movement.
+    /// The first row (shoulders, chest, wrists, calves) is the break-1 sequence of the original guide.
+    static let byArea: [(area: BodyArea, items: [Movement])] = [
+        (.neckShoulders, [.shoulders, .neckTilt, .shrug]),
+        (.back, [.chest, .upperBack, .twist]),
+        (.hands, [.wrists, .fingers]),
+        (.legs, [.calves, .march]),
+    ]
+    static var rotating: [Movement] { byArea.flatMap(\.items) }
+
+    /// Contract: deterministic for equal inputs (no randomness). `rotation` comes from the persisted
+    /// checkpoint so a restored break rebuilds the identical sequence; `rotation` 0 behaves like 1.
+    /// Durations are positive and sum to `duration`; the last movement absorbs the remainder.
+    /// Rule: pick ~30 s movements (long breaks: 40% of the time, then a walk for the other 60%); never
+    /// repeat a movement inside a break; a break's first movement differs from the previous rotation's;
+    /// with `.all` the picks cycle through the body areas starting at a rotating area; any other focus
+    /// uses its own area first and fills from the general catalog.
     static func sequence(long: Bool, duration: Double, focus: ExerciseFocus = .all, rotation: Int = 0) -> [ExerciseDefinition] {
-        let movements: [ExerciseDefinition.Movement] = long ? [.shoulders, .chest, .wrists, .calves, .walk] : [.shoulders, .chest, .wrists, .calves]
-        let areas = ["shoulders", "chest", "wrists", "legs", "whole"]
+        let total = duration.isFinite && duration > 0 ? duration : 1
+        let walkShare = long ? 0.6 : 0
+        let count = min(rotating.count, max(1, Int((total * (1 - walkShare) / 30).rounded())))
+        let movements = pick(count: count, focus: focus, turn: max(0, rotation - 1)) + (long ? [Movement.walk] : [])
+        let each = total * (1 - walkShare) / Double(count)
+        var used = 0.0
         return movements.enumerated().map { index, movement in
-            ExerciseDefinition(id: movement, duration: (index == 4 ? 180 : 30) * duration / (long ? 300 : 120), area: areas[index])
+            let length = index == movements.count - 1 ? total - used : each
+            used += length
+            return ExerciseDefinition(id: movement, duration: length)
         }
+    }
+
+    private static func pick(count: Int, focus: ExerciseFocus, turn: Int) -> [Movement] {
+        var picked: [Movement] = []
+        if let area = focus.area, let own = byArea.first(where: { $0.area == area })?.items {
+            let start = turn % own.count
+            picked = Array((own[start...] + own[..<start]).prefix(count))
+            if picked.count == count { return picked }
+        }
+        let general = byArea.map { entry in entry.items.filter { !picked.contains($0) } }
+        var cursor = Array(repeating: 0, count: general.count)
+        let areaStart = turn % general.count
+        var step = 0
+        while picked.count < count {
+            let a = (areaStart + step) % general.count
+            step += 1
+            let items = general[a]
+            guard cursor[a] < items.count else { continue }
+            picked.append(items[(turn + cursor[a]) % items.count])
+            cursor[a] += 1
+        }
+        return picked
     }
 }
 
@@ -32,6 +119,13 @@ struct ExerciseSequenceController {
     private(set) var elapsed: Double = 0
     var current: ExerciseDefinition { exercises[index] }
     var remaining: Double { max(0, current.duration - elapsed) }
+    /// Time shown on the countdown. The final movement fills the overall budget; earlier ones never
+    /// show more than the break itself has left (e.g. after manual navigation).
+    func displayRemaining(breakRemaining: Double) -> Double {
+        guard breakRemaining.isFinite else { return remaining }
+        let budget = max(0, breakRemaining)
+        return index == exercises.count - 1 ? budget : min(remaining, budget)
+    }
     init(long: Bool, duration: Double, focus: ExerciseFocus = .all, rotation: Int = 0, elapsed: Double = 0) {
         exercises = ExerciseCatalog.sequence(long: long, duration: duration, focus: focus, rotation: rotation)
         advance(elapsed)
@@ -48,6 +142,13 @@ struct ExerciseSequenceController {
     mutating func navigate(_ offset: Int) {
         index = min(exercises.count - 1, max(0, index + offset)); elapsed = 0
     }
+}
+
+/// The visual clock only re-anchors when it drifts from scheduler-accepted time (for example after
+/// an awake gap the scheduler rejected), so normal one-second snapshots never make the figure jump.
+func exerciseVisualNeedsResync(visual: Double, accepted: Double, tolerance: Double = 2) -> Bool {
+    guard visual.isFinite, accepted.isFinite else { return true }
+    return abs(visual - accepted) > tolerance
 }
 
 // Visual playback owns no timer and never updates the scheduler.
