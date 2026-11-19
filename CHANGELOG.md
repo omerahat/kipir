@@ -42,3 +42,21 @@ Exercise illustration refinement: adjust shoulder range, use a side-view in-plac
 
 ## 0.1.1 — 2026-10-31
 Release build 2 packages the quality-of-life features, updated native exercise artwork and notification visibility guidance above. Universal ad hoc preview; existing user settings/checkpoints remain compatible. Homebrew cask pins the new immutable archive SHA-256. Version/build metadata now comes from Config.xcconfig for both Info.plist fields.
+
+## Unreleased — 0.2.0
+Not released; `Config.xcconfig` is unchanged at 0.1.1/build 2. Automated evidence is in TESTING.md; device and human acceptance are pending.
+
+Added
+- Natural break: a verified no-input span (Off/5/10/15 min, default 10) restarts the work interval and withdraws a due reminder. It never counts as a completed break and never touches the short/long cycle. The effective threshold is max(setting, AFK + 60 s). A short notice appears on the first input afterwards.
+- Working hours (weekdays, start, end, overnight allowed): outside the window nothing is credited and no reminder is sent; new `offHours` status.
+- Notification state (off, needs permission, denied, limited, active) with a single primary action; diagnostics and test notification moved into a collapsed section.
+- Two-step first-run welcome inside the popover.
+- Menu bar style (timer or icon), tooltip, per-state status notes, 6-second completion/natural-break notice, break-length presets with a non-destructive Custom row, shared spacing scale.
+- Exercise catalog grew from 5 to 11 movements in body areas, with deterministic rotation, optional exercise focus and a redesigned flat vector key-pose illustration set (cosine blending, loop fitting, Reduce Motion pairs).
+- `Scripts/release-developer-id.sh` (BLOCKED here: no Developer ID identity) and a `WRITE_CASK=1` guard so packaging no longer rewrites `Casks/kipir.rb` by default.
+
+Changed
+- New Settings/Checkpoint keys decode leniently, so 0.1.x data keeps working. Two scheduler tests now set `naturalBreak = 0` because their long no-input spans would legitimately trigger the reset.
+- Status wording and layout use consistent spacing; Turkish and English resources cover all new strings.
+
+Not claimed: live UI, VoiceOver, notification delivery, physical sleep/wake, real DST, movement correctness, signing or notarization.

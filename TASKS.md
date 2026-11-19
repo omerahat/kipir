@@ -89,3 +89,24 @@ Status separates implemented/automated evidence from human or device acceptance.
 - [x] Deterministic settings matrix, native mapping/presentation, delegate/category retention, quiet test isolation and settings-navigation tests: 54 SPM / 61 Xcode tests passed; Debug build passed.
 - [ ] Live checks: Banners enabled, alert style None, Focus enabled, Settings foreground test and background test; actual on-screen appearance remains unverified.
 - [x] Final banner-fix Release build and localization/whitespace checks passed. Detailed command results and six manual acceptance procedures are in TESTING.md.
+
+## 0.2 roadmap — 2026-11-19 (unreleased; Config.xcconfig still 0.1.1)
+Automated evidence is in TESTING.md ("0.2 integration"); unchecked items need a person or a device.
+- [x] Contracts: file ownership, lenient persisted fields, pre-registered project membership (DECISIONS 017).
+- [x] Scheduler: conservative natural break with unlock baseline and first-input notice (DECISIONS 018); working hours with injected calendar and `offHours` status (DECISIONS 019); deterministic tests, including two older tests that now set `naturalBreak = 0`.
+- [x] Notifications: effective state with a single primary action, diagnostics disclosure, explicit-click-only requests (DECISIONS 022).
+- [x] First run: two-step onboarding inside the popover.
+- [x] Presentation: menu bar style (timer/icon) with tooltip, per-state status notes, break-length presets with a non-destructive Custom row, 6 s transient notices, working-hours editor, natural-break and exercise-focus pickers, spacing scale (DECISIONS 023).
+- [x] Exercises: 11-movement catalog with body areas, deterministic rotation, focus fallback (DECISIONS 020, 024), flat vector key-pose redesign, loop fitting, visual resync, Reduce Motion pairs.
+- [x] Release preparation: `Scripts/release-developer-id.sh` and `WRITE_CASK` guard (DECISIONS 021); guard tests with stubbed tools.
+- [x] Automated verification: `swift test` 136/136, Xcode 143/143, localization and release-script checks (TESTING.md).
+- [x] Offscreen key-pose sheets rendered and inspected (illustration evidence only).
+- [ ] Final independent review (Agent A) recorded in docs/IMPLEMENTATION_PROGRESS.md.
+- [ ] Live popover layout, light/dark and onboarding with the real permission prompt.
+- [ ] Menu bar label in both styles and its tooltip.
+- [ ] VoiceOver, keyboard and Reduce Motion in the running app.
+- [ ] Notification delivery and actions on a real Mac.
+- [ ] Physical sleep/wake/lock and natural break in real use; working hours across a real DST change.
+- [ ] Human pose review of all 11 movements and native Turkish copy review.
+- [ ] Extended energy/resource use.
+- [ ] Developer ID signing, notarization and Gatekeeper assessment: BLOCKED, no identity on this Mac (maintainer action).

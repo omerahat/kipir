@@ -10,7 +10,7 @@ open build/Build/Products/Debug/Kipir.app
 Requires Xcode and a macOS 14+ host. Xcode normally signs a local Debug build as **Sign to Run Locally**, without an Apple certificate or team. Do not set `CODE_SIGNING_ALLOWED=NO` for an app you intend to use; unsigned builds cannot request notifications. Local signing does not establish distributability.
 
 ## Automated coverage
-Deterministic monotonic/date/idle injection: active accumulation, AFK threshold, return, prolonged inactivity, duplicate due prevention, short/long cycle, snooze, skip, pause, Meeting Mode, sleep/wake and unknown gaps, invalid input, configuration, midnight, restart and permission-denied fallback. Local persistence is tested in isolated UserDefaults suites.
+Deterministic monotonic/date/idle injection: active accumulation, AFK threshold, return, prolonged inactivity, duplicate due prevention, short/long cycle, snooze, skip, pause, Meeting Mode, sleep/wake and unknown gaps, invalid input, configuration, midnight, restart and permission-denied fallback. Local persistence is tested in isolated UserDefaults suites. 0.2 coverage and results are in "0.2 integration — 2026-11-19" below.
 
 ## Manual acceptance procedure
 1. Run from Xcode, confirm menu item and no Dock icon; open panel by mouse and keyboard. Capture light/dark screenshots.
@@ -171,3 +171,42 @@ User explicitly authorized pushing and updating Homebrew. Verified the public re
 `bash Scripts/package-release.sh`: exit 0, universal Release build and ad hoc signature checks passed; log `build/package-release.log`, wrapper log `/tmp/kipir-011-package.log`. New `dist/Kipir-0.1.1.zip` SHA-256: `35fe95418a6bb27428a71e70298f41278212918410caffc8b79bb24b1d27d6e3`. Cask and sidecar match. Extracted ZIP verifies with codesign --verify --deep --strict and lipo -verify_arch arm64 x86_64; extracted bundle reports version 0.1.1/build 2. ZIP integrity, packaging guard tests (2), Ruby cask syntax, localization checks (2), property-list parsing and git diff --check passed. No Gatekeeper bypass, local app upgrade/uninstall, system setting change or human/device acceptance is implied.
 
 0.1.1 final Debug `build test` with documented ad hoc overrides, compiler indexing disabled and failure diagnostics disabled: **exit 0; BUILD SUCCEEDED / TEST SUCCEEDED; 61 tests, 0 failures**. Log `/tmp/kipir-011-xcode.log`; result `build/Logs/Test/Run-Kipir-2026.10.31_03-32-10-+0300.xcresult`. Homebrew's own CaskLoader parsed the generated cask and resolved the exact v0.1.1 asset URL. Publication/download verification is reported separately from these local checks.
+
+## 0.2 integration — 2026-11-19
+Branch `feature/0.2-roadmap` (baseline `0f6caf4`, 0.1.1). Version metadata unchanged. Status words: PASS, FAIL, BLOCKED, MANUAL REVIEW REQUIRED. Results below were reported by the orchestrator from runs on the development Mac; raw logs are not reproduced here. Commands are exactly as executed.
+
+### Automated results
+| Check | Command | Result |
+|---|---|---|
+| Baseline before any 0.2 work | `swift test` | PASS, 54/54 |
+| Baseline before any 0.2 work | Xcode `test` (command below) | PASS, 61/61 |
+| After integrating all workstreams | `swift test` | PASS, 136/136 |
+| After integrating all workstreams | `xcodebuild -project Kipir.xcodeproj -scheme Kipir -configuration Debug -derivedDataPath build CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual CODE_SIGNING_ALLOWED=YES test` | PASS, 143/143, TEST SUCCEEDED. The 7 NotificationManager tests run only under Xcode. |
+| Localization keys and tables | `python3 Scripts/test-localization.py` | PASS (OK) |
+| Developer ID release script guards | `python3 Scripts/test-release-developer-id.py` | PASS, 11 checks (stubbed tools) |
+| Packaging guards | `python3 Scripts/test-package-release.py` | PASS, 2 checks |
+
+New automated coverage: natural-break accrual, threshold, taint and unlock edges; zero-delta ignore; suspended accrual; first-input notice; working-hours boundaries, overnight windows, DST and injected calendars; lenient migration of new keys; effective notification state matrix and primary actions; transient notice expiry and priority; break-duration presets and Custom preservation; working-hours editing helpers; catalog determinism, rotation, focus fallback, duration sums, `loopPeriod`, visual resync, restore after a focus change, and localized names/instructions for all movements. Two older scheduler tests set `naturalBreak = 0` because their spans of 600 s or more without input would legitimately trigger the natural reset.
+
+### Environment findings
+- BLOCKED: signing and notarization. The Developer ID identity check found 0 identities, so `Scripts/release-developer-id.sh` could not sign, notarize, staple or run `spctl`. Nothing was uploaded to Apple. The script tests above use stubbed tools and prove only the guards and argument handling.
+- BLOCKED: live UI screenshots. `screencapture` failed in the agent environment ("could not create image from display"), so no live popover, Settings or menu bar capture exists.
+- Illustration evidence only: exercise key-pose sheets were rendered offscreen from production code with the command in the header of `Scripts/ExerciseVisualEvidence.swift` and inspected. This is not live playback and not a movement review.
+- Partial runtime evidence: the Debug app launched and ran for about 8 s without crashing. It ran under the real bundle identifier and may have written a checkpoint to the user's real defaults.
+- `git status` after these documentation changes shows `Casks/kipir.rb` unmodified; `Scripts/package-release.sh` now replaces it only with `WRITE_CASK=1`.
+
+### MANUAL REVIEW REQUIRED
+Nothing below is established by unit tests or the offscreen sheets.
+1. Live popover layout in all states (working, idle, paused, meeting, suspended, off hours, due, break) and with notices.
+2. Onboarding with the real notification permission prompt (the popover may close when the system prompt appears).
+3. Menu bar label in both styles (timer and icon) and its tooltip.
+4. Light and dark appearance.
+5. VoiceOver reading order and labels, including the menu bar summary.
+6. Reduce Motion (two still poses per movement) and keyboard operation (focus order, arrow keys, Space).
+7. Notification delivery and actions on a real Mac, including denied and limited states and Focus.
+8. Physical sleep/wake/lock and fast user switching, and natural break in real use (leave past the threshold, return, confirm the reminder is withdrawn, no completed break is added and the notice appears on first input).
+9. Working hours across a real DST change and over midnight.
+10. Human pose review of all 11 movements and native Turkish copy review of all new strings.
+11. Extended energy and resource use.
+
+Suggested spot checks: set natural break to 5 minutes, leave the Mac untouched and confirm the work interval restarts (with an AFK threshold above 4 minutes the effective threshold is AFK + 60 s instead); set a working-hours window a few minutes ahead and observe off-hours status, withdrawn reminder and resumption; set menu bar style to icon and read the tooltip; pick a non-preset break length (only possible from older data) and confirm the Custom row appears without rewriting it.
