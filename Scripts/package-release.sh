@@ -16,7 +16,7 @@ if [[ -e "$archive" ]]; then
   echo "Refusing to overwrite $archive. Bump the version or move the previous artifact first." >&2
   exit 1
 fi
-mkdir -p dist Casks build
+mkdir -p dist build
 xcodebuild -project Kipir.xcodeproj -scheme Kipir -configuration Release \
   -derivedDataPath build COMPILER_INDEX_STORE_ENABLE=NO ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
   CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual CODE_SIGNING_ALLOWED=YES \
@@ -30,7 +30,10 @@ actual_version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' 
 /usr/bin/ditto -c -k --sequesterRsrc --keepParent "$app" "$archive"
 sha256=$(/usr/bin/shasum -a 256 "$archive" | awk '{print $1}')
 printf '%s  %s\n' "$sha256" "Kipir-${version}.zip" > "${archive}.sha256"
-cat > Casks/kipir.rb <<CASK
+# The cask embeds the SHA-256 of a not-yet-published ZIP, so it is written to dist/ by default.
+# The tracked Casks/kipir.rb is only replaced when WRITE_CASK=1 is set explicitly.
+cask_file=dist/kipir.rb
+cat > "$cask_file" <<CASK
 cask "kipir" do
   version "$version"
   sha256 "$sha256"
@@ -52,4 +55,11 @@ cask "kipir" do
   EOS
 end
 CASK
-printf 'Prepared %s and Casks/kipir.rb (not published).\n' "$archive"
+if [[ "${WRITE_CASK:-}" == "1" ]]; then
+  mkdir -p Casks
+  cp "$cask_file" Casks/kipir.rb
+  printf 'Prepared %s and updated Casks/kipir.rb (WRITE_CASK=1; not published).\n' "$archive"
+else
+  printf 'Prepared %s and %s (not published). Casks/kipir.rb is unchanged.\n' "$archive" "$cask_file"
+  printf 'To adopt it for this exact archive: cp %s Casks/kipir.rb (or rerun with WRITE_CASK=1).\n' "$cask_file"
+fi
