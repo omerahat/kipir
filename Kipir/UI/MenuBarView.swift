@@ -1,30 +1,29 @@
 import SwiftUI
 import AppKit
 
+/// Spacing scale shared by the popover and Settings.
+enum Space {
+    static let xs: CGFloat = 4, s: CGFloat = 8, m: CGFloat = 12, l: CGFloat = 16, xl: CGFloat = 24
+}
+
 struct MenuBarView: View {
     @ObservedObject var controller: AppController
     @State private var confirmReset = false
     private var engine: BreakScheduler { controller.engine }
     var body: some View {
-        VStack(spacing: 18) {
-            HStack {
-                Image(systemName: "figure.walk").font(.title2).foregroundStyle(.teal)
+        VStack(spacing: Space.l) {
+            HStack(spacing: Space.s) {
+                Image(systemName: "figure.walk").font(.title2).foregroundStyle(.teal).accessibilityHidden(true)
                 Text(L("app.name")).font(.title3.bold())
                 Spacer()
                 Text(L("status." + engine.status.rawValue))
-                    .font(.caption.weight(.medium)).padding(.horizontal, 10).padding(.vertical, 5)
+                    .font(.caption.weight(.medium)).padding(.horizontal, Space.s + 2).padding(.vertical, Space.xs + 1)
                     .background(.teal.opacity(0.12), in: Capsule())
             }
-            if !controller.onboarded {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(L("welcome.title")).font(.headline)
-                    Text(L("welcome.body")).font(.caption).foregroundStyle(.secondary)
-                    HStack {
-                        Button(L("permission.request")) { controller.notifications.requestPermission() }
-                        Spacer()
-                        Button(L("welcome.done")) { controller.onboarded = true }
-                    }
-                }.padding(12).background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 12))
+            if !controller.onboarded { OnboardingView(controller: controller) }
+            if let note = statusNote {
+                Text(note).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity).fixedSize(horizontal: false, vertical: true)
             }
             if engine.checkpoint.phase == .onBreak {
                 BreakExerciseView(controller: controller)
@@ -33,51 +32,54 @@ struct MenuBarView: View {
                     Circle().stroke(.teal.opacity(0.12), lineWidth: 8)
                     Circle().trim(from: 0, to: engine.progress)
                         .stroke(.teal, style: StrokeStyle(lineWidth: 8, lineCap: .round)).rotationEffect(.degrees(-90))
-                    VStack(spacing: 6) {
+                    VStack(spacing: Space.xs) {
                         Text(durationText(engine.remaining)).font(.system(size: 38, weight: .medium, design: .rounded)).monospacedDigit()
-                        Text(L(engine.checkpoint.phase == .onBreak ? "timer.break" : "timer.untilBreak"))
-                            .font(.caption).foregroundStyle(.secondary)
+                        Text(L("timer.untilBreak")).font(.caption).foregroundStyle(.secondary)
                     }
                 }
                 .frame(width: 174, height: 174)
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel(L(engine.checkpoint.phase == .onBreak ? "timer.break" : "timer.untilBreak"))
+                .accessibilityLabel(L("timer.untilBreak"))
                 .accessibilityValue(durationText(engine.remaining))
-                VStack(spacing: 4) {
+                VStack(spacing: Space.xs) {
                     Text(L(engine.nextBreakIsLong ? "next.long" : "next.short")).font(.subheadline.weight(.medium))
                     Text(L("timer.confirmed") + " " + durationText(engine.activeWork))
                         .font(.caption).foregroundStyle(.secondary)
                 }
-                HStack {
+                HStack(spacing: Space.s) {
                     Button { controller.perform(.togglePause) } label: {
                         Label(L(engine.paused ? "resume" : "pause"), systemImage: engine.paused ? "play.fill" : "pause.fill")
                     }
-                    if engine.checkpoint.phase != .onBreak {
+                    // The break action is the single prominent control, and only when a break is due.
+                    if engine.status == .due {
                         Button(L("break.start")) { controller.perform(.startBreak) }
                             .buttonStyle(.borderedProminent).tint(.teal)
+                    } else {
+                        Button(L("break.start")) { controller.perform(.startBreak) }
                             .disabled(engine.paused || engine.meeting || engine.suspended)
                     }
                 }.controlSize(.large)
                 if engine.status == .due {
-                    HStack {
+                    HStack(spacing: Space.s) {
                         Button(L("snooze")) { controller.perform(.snooze) }
                         Button(L("skip")) { controller.perform(.skip) }
                     }
                 }
+                if let notice = controller.notice { noticeView(notice) }
                 HStack {
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: Space.xs) {
                         Text(L("today.title")).font(.caption).foregroundStyle(.secondary)
                         Text(durationText(engine.today.activeSeconds)).font(.headline).monospacedDigit()
                         Text(L("today.active")).font(.caption2).foregroundStyle(.secondary)
                     }
                     Spacer()
-                    VStack(alignment: .trailing, spacing: 4) {
+                    VStack(alignment: .trailing, spacing: Space.xs) {
                         Text("\(engine.today.breaks)").font(.title2.weight(.semibold))
                         Text(L("today.breaks")).font(.caption2).foregroundStyle(.secondary)
                     }
-                }.padding(14).background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 14))
+                }.padding(Space.m).background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 12))
             }
-            HStack {
+            HStack(spacing: Space.s) {
                 Toggle(isOn: Binding(get: { engine.meeting }, set: { controller.setMeeting($0) })) {
                     Label(L("meeting"), systemImage: "person.2")
                 }.toggleStyle(.switch)
@@ -87,7 +89,7 @@ struct MenuBarView: View {
                     }
                     Button(L("meeting.indefinite")) { controller.setMeeting(true) }
                 } label: { Image(systemName: "clock").accessibilityLabel(L("meeting.duration")) }
-                .menuStyle(.borderlessButton).fixedSize()
+                .menuStyle(.borderlessButton).fixedSize().help(L("meeting.duration"))
             }
             if engine.meeting {
                 HStack {
@@ -107,14 +109,25 @@ struct MenuBarView: View {
                     Button(L("session.reset")) { confirmReset = true }
                     Button(L("quit")) { NSApp.terminate(nil) }
                 } label: { Image(systemName: "ellipsis.circle").accessibilityLabel(L("more")) }
-                .menuStyle(.borderlessButton).fixedSize()
+                .menuStyle(.borderlessButton).fixedSize().help(L("more"))
             }.font(.caption)
         }
-        .padding(20).frame(width: 330)
+        .padding(Space.l).frame(width: 330)
         .alert(L("session.reset"), isPresented: $confirmReset) {
             Button(L("cancel"), role: .cancel) {}
             Button(L("session.reset"), role: .destructive) { controller.perform(.reset) }
         } message: { Text(L("session.resetMessage")) }
         .onAppear { controller.tick(); controller.refreshSystemSettings() }
+    }
+    /// One short line explaining the current state; plain working needs none.
+    private var statusNote: String? {
+        engine.status == .working ? nil : L("ui.status.note." + engine.status.rawValue)
+    }
+    /// No transition or animation is attached, so Reduce Motion and default users see the same stable layout.
+    private func noticeView(_ notice: TransientNotice) -> some View {
+        let text = notice.count.map { String(format: L(notice.textKey), $0) } ?? L(notice.textKey)
+        return Label(text, systemImage: notice.count == nil ? "arrow.clockwise" : "checkmark.circle")
+            .font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity)
+            .accessibilityElement(children: .combine)
     }
 }

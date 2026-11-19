@@ -130,4 +130,50 @@
 /* ---- separator: do not edit ---- */
 
 /* ==== UI workstream: add keys only between these markers ==== */
+"ui.notice.breakCompleted" = "Bugün %d mola tamamlandı.";
+"ui.notice.naturalBreak" = "Doğal mola algılandı. Çalışma sayacı yenilendi.";
+"ui.notif.state.off" = "Mola bildirimleri kapalı.";
+"ui.notif.state.needsPermission" = "Bildirim izni henüz istenmedi.";
+"ui.notif.state.denied" = "Bildirim izni kapalı.";
+"ui.notif.state.limited" = "Bildirimler sınırlı; ekranda görünmeyebilir.";
+"ui.notif.state.active" = "Bildirim izni verildi.";
+"ui.notif.diagnostics" = "Tanılama ve test";
+"ui.duration.seconds" = "%d sn";
+"ui.duration.minutes" = "%d dk";
+"ui.duration.minutesSeconds" = "%d dk %d sn";
+"ui.duration.custom" = "Özel (%@)";
+"ui.status.note.idle" = "Bir süredir girdi yok; bu süre sayılmıyor.";
+"ui.status.note.paused" = "Sen duraklattın; sayaç bekliyor.";
+"ui.status.note.meeting" = "Toplantı modu açık; sayaç donduruldu.";
+"ui.status.note.suspended" = "Ekran kilitli veya Mac uykuda; bu süre sayılmıyor.";
+"ui.status.note.offHours" = "Çalışma saatleri dışında; süre sayılmıyor, hatırlatma yapılmıyor.";
+"ui.status.note.due" = "Mola zamanı geldi. Şimdi başlayabilir ya da erteleyebilirsin.";
+"ui.status.note.onBreak" = "Mola sürüyor. İstediğin zaman bitirebilirsin.";
+"ui.setting.menuBarStyle" = "Menü çubuğu";
+"ui.menuBarStyle.timer" = "Simge + süre";
+"ui.menuBarStyle.icon" = "Yalnızca simge";
+"ui.settings.breaks" = "Mola ve hareketler";
+"ui.naturalBreak.title" = "Doğal mola eşiği";
+"ui.naturalBreak.off" = "Kapalı";
+"ui.naturalBreak.note" = "Bu kadar süre girdi olmazsa çalışma sayacı yeniden başlar; tamamlanan mola olarak sayılmaz.";
+"ui.focus.title" = "Hareket odağı";
+"ui.focus.all" = "Tümü";
+"ui.focus.neckShoulders" = "Boyun ve omuz";
+"ui.focus.back" = "Sırt";
+"ui.focus.hands" = "Bilek ve eller";
+"ui.hours.section" = "Çalışma saatleri";
+"ui.hours.enable" = "Yalnızca çalışma saatlerinde say";
+"ui.hours.days" = "Günler";
+"ui.hours.start" = "Başlangıç";
+"ui.hours.end" = "Bitiş";
+"ui.hours.overnight" = "Bitiş saati ertesi güne denk gelir.";
+"ui.hours.note" = "Kıpır, çalışma saatleri dışında süre saymaz ve hatırlatma yapmaz.";
+"ui.onboarding.title" = "Küçük bir hareket, iyi bir başlangıç.";
+"ui.onboarding.menubar" = "Kıpır menü çubuğunda yaşar; simgesine tıklayınca panel açılır.";
+"ui.onboarding.timing" = "Yalnızca etkin kullanım süresi sayılır. Kısa ve uzun molalar sırayla gelir.";
+"ui.onboarding.local" = "Her şey bu Mac’te kalır.";
+"ui.onboarding.next" = "Devam";
+"ui.onboarding.notif.title" = "Bildirim istersen";
+"ui.onboarding.notif.body" = "Mola zamanı geldiğinde haber verebiliriz. İzin vermeden de Kıpır panelden çalışır.";
+"ui.onboarding.notif.done" = "Bildirim izni verildi.";
 /* ==== end UI workstream ==== */
