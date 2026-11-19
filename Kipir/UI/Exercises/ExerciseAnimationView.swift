@@ -135,7 +135,8 @@ enum ExerciseArtwork {
             let down = front, up = front.with([.head: p(120, 35), .shL: p(106, 46), .shR: p(134, 46), .elL: p(92, 74), .elR: p(148, 74), .haL: p(90, 98), .haR: p(150, 98)])
             return Scene(view: .front, keys: [down, up])
         case .neckTilt:
-            func t(_ s: Double) -> Pose { front.with([.head: p(120 + 13 * s, 32 + 1)], tilt: 0.38 * s) }
+            // The head swings about the top of the torso, so the neck stays under the head.
+            func t(_ s: Double) -> Pose { front.with([.head: p(120 + 22 * sin(0.42 * s), 52 - 22 * cos(0.42 * s))], tilt: 0.42 * s) }
             return Scene(view: .front, keys: [t(-1), t(1)])
         case .chest:
             let closed = front.with([.elL: p(103, 80), .elR: p(137, 80), .haL: p(118, 74), .haR: p(122, 74)])
@@ -194,6 +195,7 @@ enum ExerciseArtwork {
         render(&c, movement, alternateHand) { keys in keys[min(max(0, key), keys.count - 1)] }
     }
     private static func render(_ c: inout GraphicsContext, _ m: Movement, _ alternate: Bool, _ pick: ([[Double]]) -> [Double]) {
+        c.clip(to: Path(CGRect(x: 0, y: 0, width: 240, height: 180)))
         switch m {
         case .wrists:
             wrists(&c, angle: pick([[-0.3], [-1.4]])[0], mirrored: alternate)
@@ -278,7 +280,7 @@ enum ExerciseArtwork {
         arm(.shL, .elL, .haL, far: false)
         if !isSide { arm(.shR, .elR, .haR, far: false) }
         let head = pose[.head]
-        line(&c, shoulderMid, head, 9, skin)
+        line(&c, P(x: shoulderMid.x, y: shoulderMid.y - 6), head, 10, skin)
         dot(&c, head, 15, skin)
         // Hair cap and face marks are rotated about the head centre by the head tilt.
         func rot(_ x: Double, _ y: Double) -> CGPoint {
@@ -297,25 +299,28 @@ enum ExerciseArtwork {
 
     // MARK: Hand close-ups
 
-    /// Side view: the near hand bends backward from its wrist while the other hand eases the fingers back.
+    /// Side view, all inside the 240x180 design space: the near (light, teal sleeve) hand bends back at
+    /// the wrist; the darker helping hand from the right rests on its fingertips, marked by an accent dot.
     private static func wrists(_ c: inout GraphicsContext, angle: Double, mirrored: Bool) {
-        if mirrored { c.translateBy(x: 240, y: 0); c.scaleBy(x: -1, y: 1) }
-        let wrist = p(78, 118), d = p(cos(angle), sin(angle)), n = p(-d.y, d.x)
+        c.translateBy(x: 117, y: 90); c.scaleBy(x: 1.15, y: 1.15); c.translateBy(x: -100, y: -90)
+        if mirrored { c.translateBy(x: 200, y: 0); c.scaleBy(x: -1, y: 1) }
+        let wrist = p(64, 106), d = p(cos(angle), sin(angle)), n = p(-d.y, d.x)
         func at(_ o: P, _ along: Double, _ across: Double = 0) -> P { p(o.x + along * d.x + across * n.x, o.y + along * d.y + across * n.y) }
-        line(&c, p(-10, 118), p(34, 118), 40, shirt); line(&c, p(34, 118), wrist, 28, skin)
-        let tip = at(wrist, 76), palmEnd = at(wrist, 34)
-        line(&c, wrist, palmEnd, 32, skin); line(&c, palmEnd, tip, 26, skin)
-        line(&c, at(wrist, 6, -12), at(wrist, 34, -26), 12, skin)
-        // The helping hand rests on the fingertips and its forearm leaves toward the lower right.
-        let contact = at(wrist, 66, 15), helper = at(contact, 0, 26)
-        let cuff = p(helper.x + 26, helper.y + 14)
-        line(&c, p(cuff.x + 44, cuff.y + 36), cuff, 36, shirtFar)
-        line(&c, cuff, helper, 24, skinFar); line(&c, helper, contact, 20, skinFar)
+        line(&c, p(28, 106), p(40, 106), 36, shirt); line(&c, p(40, 106), wrist, 26, skin)
+        let tip = at(wrist, 62), palmEnd = at(wrist, 30)
+        line(&c, wrist, palmEnd, 30, skin); line(&c, palmEnd, tip, 24, skin)
+        line(&c, at(wrist, 6, -11), at(wrist, 28, -24), 11, skin)
+        let contact = at(wrist, 54, 14), helper = at(contact, 0, 22)
+        let cuff = p(helper.x + 30, helper.y + 12)
+        line(&c, p(cuff.x + 30, cuff.y + 11), cuff, 32, shirtFar)
+        line(&c, cuff, helper, 22, skinFar); line(&c, helper, contact, 18, skinFar)
+        dot(&c, contact, 4.5, accent)
     }
     /// params: finger spread, finger length, thumb angle, thumb length, fist amount (0 open, 1 closed).
     private static func fingers(_ c: inout GraphicsContext, _ v: [Double]) {
-        line(&c, p(120, 195), p(120, 150), 36, shirt)
-        line(&c, p(120, 172), p(120, 140), 30, skin)
+        c.translateBy(x: 0, y: -14)
+        line(&c, p(120, 176), p(120, 152), 38, shirt)
+        line(&c, p(120, 160), p(120, 140), 30, skin)
         line(&c, p(120, 138), p(120, 122), 58, skin)
         for i in 0..<4 {
             let k = Double(i) - 1.5, base = p(120 + k * 13.5, 106), a = -Double.pi / 2 + v[0] * k
