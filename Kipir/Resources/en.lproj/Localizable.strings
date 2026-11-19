@@ -65,7 +65,7 @@
 "exercise.shoulders" = "Shoulder rolls";
 "exercise.shoulders.instruction" = "Relax your arms; slowly roll your shoulders backward in small circles.";
 "exercise.chest" = "Chest opening";
-"exercise.chest.instruction" = "With soft elbows, open your arms to the sides, then gently bring them back.";
+"exercise.chest.instruction" = "Bring your arms together in front of your chest, then gently open them to the sides.";
 "exercise.wrists" = "Wrist stretch";
 "exercise.wrists.instruction" = "Gently guide the fingers of one hand backward with the other; switch hands halfway through.";
 "exercise.calves" = "Heel raises";
@@ -124,6 +124,18 @@
 /* ---- separator: do not edit ---- */
 
 /* ==== Exercise workstream: add keys only between these markers ==== */
+"exercise.neckTilt" = "Neck side tilt";
+"exercise.neckTilt.instruction" = "Keep your shoulders relaxed; slowly tilt your head to one side, then the other.";
+"exercise.shrug" = "Shoulder shrugs";
+"exercise.shrug.instruction" = "Lift your shoulders toward your ears, then let them drop.";
+"exercise.upperBack" = "Upper-back rounding";
+"exercise.upperBack.instruction" = "Seated, reach your hands forward and gently round your upper back; then sit tall.";
+"exercise.twist" = "Seated twist";
+"exercise.twist.instruction" = "Staying seated, slowly turn your torso to one side, then the other.";
+"exercise.fingers" = "Finger open and close";
+"exercise.fingers.instruction" = "Spread your fingers comfortably, then make a loose fist and repeat slowly.";
+"exercise.march" = "March in place";
+"exercise.march.instruction" = "Stand up and lift your knees one at a time at an easy pace.";
 /* ==== end exercise workstream ==== */
 
 /* ---- separator: do not edit ---- */
