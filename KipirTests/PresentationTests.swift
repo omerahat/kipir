@@ -60,10 +60,9 @@ final class PresentationTests: XCTestCase {
     }
 
     func testCompletionOutranksNaturalBreakInOnePublish() {
-        let both = BreakCompletionFeedback.Outcome(completed: true, playSound: false, naturalBreak: true)
-        XCTAssertEqual(TransientNotice.next(current: nil, outcome: both, todayBreaks: 2, now: 10)?.kind, .breakCompleted(today: 2))
-        let natural = BreakCompletionFeedback.Outcome(completed: false, playSound: false, naturalBreak: true)
-        let n = TransientNotice.next(current: nil, outcome: natural, todayBreaks: 2, now: 10)
+        let both = BreakCompletionFeedback.Outcome(completed: true, playSound: false)
+        XCTAssertEqual(TransientNotice.next(current: nil, outcome: both, naturalBreak: true, todayBreaks: 2, now: 10)?.kind, .breakCompleted(today: 2))
+        let n = TransientNotice.next(current: nil, outcome: BreakCompletionFeedback.Outcome(), naturalBreak: true, todayBreaks: 2, now: 10)
         XCTAssertEqual(n?.kind, .naturalBreak); XCTAssertNil(n?.count)
         XCTAssertEqual(n?.textKey, "ui.notice.naturalBreak")
     }
@@ -108,11 +107,12 @@ final class PresentationTests: XCTestCase {
         XCTAssertEqual(e.today.breaks, 0)
     }
 
-    func testNaturalBreakStubDoesNotFabricateNotice() {
-        // Until the scheduler reports one, nothing is claimed; with the real event the flag maps to a notice.
+    func testCompletionFeedbackLeavesNaturalBreakEventForTheController() {
+        // Legacy sound consumption must not swallow the scheduler's one-shot natural-break event.
         let c = Clock(); let e = c.engine(); c.step(e, seconds: 5)
-        let outcome = BreakCompletionFeedback.consume(from: e)
-        XCTAssertEqual(outcome.naturalBreak, false)
+        BreakCompletionFeedback.consume(from: e) {}
+        XCTAssertFalse(e.consumeNaturalBreak(), "stub returns false; the point is consume(from:) does not call it")
+        XCTAssertNil(TransientNotice.next(current: nil, outcome: BreakCompletionFeedback.Outcome(), naturalBreak: false, todayBreaks: 0, now: 0))
     }
 
     // MARK: Menu bar formatter
