@@ -18,11 +18,18 @@ struct WorkingHours: Codable, Equatable {
         return w
     }
 
-    /// Contract (implemented by the scheduler workstream): whether `date` lies inside the window.
-    /// Disabled windows always contain every date.
+    /// Whether `date` lies inside the window, read in `calendar`'s local time. Disabled windows contain every
+    /// date. The start minute is inside, the end minute is outside. An overnight window (end < start) belongs
+    /// to the weekday it starts on, so its after-midnight part is checked against the previous weekday.
     func contains(_ date: Date, calendar: Calendar = .current) -> Bool {
         guard enabled else { return true }
-        return true
+        let w = validated()
+        let parts = calendar.dateComponents([.weekday, .hour, .minute], from: date)
+        guard let weekday = parts.weekday, let hour = parts.hour, let minute = parts.minute else { return true }
+        let now = hour * 60 + minute
+        if w.start < w.end { return w.weekdays.contains(weekday) && now >= w.start && now < w.end }
+        let previous = weekday == 1 ? 7 : weekday - 1
+        return (w.weekdays.contains(weekday) && now >= w.start) || (w.weekdays.contains(previous) && now < w.end)
     }
 }
 
