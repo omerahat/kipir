@@ -15,10 +15,10 @@ struct BreakExerciseView: View {
                     .frame(height: 180).padding(8)
                     .background(.teal.opacity(0.08), in: RoundedRectangle(cornerRadius: 18))
                 Text(L(sequence.current.instructionKey)).multilineTextAlignment(.center).frame(minHeight: 42)
-                Text(durationText((sequence.index == sequence.exercises.count - 1 ? controller.engine.remaining : min(sequence.remaining, controller.engine.remaining))))
+                Text(durationText(sequence.displayRemaining(breakRemaining: controller.engine.remaining)))
                     .font(.system(size: 32, weight: .medium, design: .rounded)).monospacedDigit()
                     .accessibilityLabel(L("exercise.remaining"))
-                    .accessibilityValue(durationText((sequence.index == sequence.exercises.count - 1 ? controller.engine.remaining : min(sequence.remaining, controller.engine.remaining))))
+                    .accessibilityValue(durationText(sequence.displayRemaining(breakRemaining: controller.engine.remaining)))
                 ProgressView(value: controller.engine.progress).tint(.teal).accessibilityLabel(L("exercise.progress"))
                 HStack {
                     Button(L("exercise.previous")) { controller.navigateExercise(-1) }.disabled(sequence.index == 0).keyboardShortcut(.leftArrow, modifiers: [])
