@@ -178,4 +178,4 @@ No contribution policy is published. If you work on the code, the conventions in
 
 ## License
 
-This repository does not include a license file, so no reuse or redistribution terms are granted. Contact the author if you want to use the code.
+Kıpır is released under the [MIT License](LICENSE).
