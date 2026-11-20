@@ -1,6 +1,6 @@
 # Kıpır — Changelog
 
-## Unreleased — Pre-release stabilization (not released)
+## 0.2.1 — Pre-release stabilization
 - The countdown ring now starts full and empties counterclockwise from 12 o'clock, reaching empty exactly at zero; a snooze refills it.
 - The menu bar item has a fixed width in every state and language: it always shows the remaining minutes (or "Break"), with the state in the icon. The panel no longer jumps sideways on pause, resume or meeting toggles (DECISIONS 030).
 - Meeting mode only silences notifications and the break-completion sound; the timer, statistics and breaks keep running. Reminders silenced during a meeting are not replayed afterwards (DECISIONS 028).
