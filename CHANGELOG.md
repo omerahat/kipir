@@ -51,10 +51,10 @@ Exercise illustration refinement: adjust shoulder range, use a side-view in-plac
 ## 0.1.1 — 2026-10-31
 Release build 2 packages the quality-of-life features, updated native exercise artwork and notification visibility guidance above. Universal ad hoc preview; existing user settings/checkpoints remain compatible. Homebrew cask pins the new immutable archive SHA-256. Version/build metadata now comes from Config.xcconfig for both Info.plist fields.
 
-## Unreleased — 0.2.0
+## 0.2.0 — 2026-11-20
 
 - Exercise animations now use illustrated start/end poses (generated with ChatGPT image generation, consistent character) crossfaded on the existing loop, replacing the programmatic Canvas figure. Reduce Motion shows both poses still.
-Not released; `Config.xcconfig` is unchanged at 0.1.1/build 2. Automated evidence is in TESTING.md; device and human acceptance are pending.
+Release build 3: universal ad hoc signed preview distributed through the Homebrew cask (SHA-256 `5ed71eeacebbde47f5d3e82e9dfe1ec667be5680f80326065140bd98efe00478`). Existing settings and checkpoints migrate leniently. Automated evidence is in TESTING.md; device and human acceptance are pending.
 
 Added
 - Natural break: a verified no-input span (Off/5/10/15 min, default 10) restarts the work interval and withdraws a due reminder. It never counts as a completed break and never touches the short/long cycle. The effective threshold is max(setting, AFK + 60 s). A short notice appears on the first input afterwards.

@@ -45,7 +45,7 @@ Status words describe automated evidence only; "MANUAL REVIEW REQUIRED" means co
 | 5 | 7.4 Completion feedback | D (sonnet/high) | MANUAL REVIEW REQUIRED | Review fix I3: notice pends up to 15 min until the popover displays it, then 6 s heartbeat-driven (DECISIONS 025); sound and appearance unverified |
 | 5 | 7.5 Working hours (scheduler + UI) | B + D (sonnet/high) | MANUAL REVIEW REQUIRED | DECISIONS 019; review fix I1: re-entering the window restarts the interval and clears a stale Due (DECISIONS 025); real DST and overnight use unverified |
 | 5 | 7.6 Final UI polish | D (sonnet/high) | MANUAL REVIEW REQUIRED | Shared spacing scale; no visual acceptance |
-| R | Developer ID / notarization prep | E (sonnet/high) | BLOCKED | Script, WRITE_CASK guard and tests done; 0 Developer ID identities, so no signing, notarization or Gatekeeper evidence |
+| R | Developer ID / notarization prep | E (sonnet/high) | NOT PLANNED (optional path kept) | Script, WRITE_CASK guard and tests done; 0 Developer ID identities, so no signing, notarization or Gatekeeper evidence |
 | R | Documentation reconciliation and 0.2 verification record | E (sonnet/high) | DONE | TASKS, CHANGELOG, TESTING, DESIGN, ARCHITECTURE, README, PRD, DECISIONS 022–024 |
 | R | Final review | A (opus/medium) | DONE | 0 Critical; Important I1 (Due survived off hours silently), I2 (suspended tick coalescing broke natural break), I3 (notice expired unseen); Minor M1–M8. 9 throwaway probes in a scratch copy. All actionable items fixed in 8a35b3a. |
 | R | Review fixes I1-I3, M1-M6 and cleanup | Integration-fix (sonnet/high) | DONE (automated evidence) | DECISIONS 025; SPM 155/155, Xcode 162/162; no device acceptance claimed |
@@ -54,3 +54,6 @@ Status words describe automated evidence only; "MANUAL REVIEW REQUIRED" means co
 - I1 residual: if the Mac sleeps or Kıpır is quit inside the window and resumes inside a later window (e.g. Friday 17:30 → Monday 09:30), no off-hours span is observed, so a stale Due episode can survive silently. Closing it needs a persisted last-observed timestamp compared with the last window start.
 - I3: whether `.onAppear` of the notice row fires only while the popover is visible depends on MenuBarExtra lifecycle — manual review.
 - M7 (refactor duplicated input detection in baseline/trackAway) and M8 (1 Hz Settings re-render, pre-existing) deferred.
+
+## Release
+0.2.0 (build 3) packaged ad hoc, published as GitHub release v0.2.0 and served via the Homebrew cask on 2026-11-20 (DECISIONS 027).
