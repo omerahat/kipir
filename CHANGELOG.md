@@ -52,6 +52,8 @@ Exercise illustration refinement: adjust shoulder range, use a side-view in-plac
 Release build 2 packages the quality-of-life features, updated native exercise artwork and notification visibility guidance above. Universal ad hoc preview; existing user settings/checkpoints remain compatible. Homebrew cask pins the new immutable archive SHA-256. Version/build metadata now comes from Config.xcconfig for both Info.plist fields.
 
 ## Unreleased — 0.2.0
+
+- Exercise animations now use illustrated start/end poses (generated with ChatGPT image generation, consistent character) crossfaded on the existing loop, replacing the programmatic Canvas figure. Reduce Motion shows both poses still.
 Not released; `Config.xcconfig` is unchanged at 0.1.1/build 2. Automated evidence is in TESTING.md; device and human acceptance are pending.
 
 Added
