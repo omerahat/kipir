@@ -160,14 +160,123 @@ final class PresentationTests: XCTestCase {
         let icon = MenuBarStatusFormatter(status: .working, remaining: 125, iconOnly: true)
         XCTAssertFalse(icon.showsText); XCTAssertEqual(icon.symbol, "figure.walk"); XCTAssertEqual(icon.minutes, 3)
         let off = MenuBarStatusFormatter(status: .offHours, remaining: 600)
-        XCTAssertEqual(off.symbol, "moon.zzz"); XCTAssertEqual(off.textKey, "menubar.offHours"); XCTAssertTrue(off.showsText)
+        XCTAssertEqual(off.symbol, "moon.zzz"); XCTAssertEqual(off.textKey, "menubar.minutes"); XCTAssertTrue(off.showsText)
         XCTAssertFalse(MenuBarStatusFormatter(status: .offHours, remaining: 600, iconOnly: true).showsText)
-        XCTAssertFalse(MenuBarStatusFormatter(status: .paused, remaining: 60).showsText)
+        XCTAssertTrue(MenuBarStatusFormatter(status: .paused, remaining: 60).showsText)
+        // A Due episode behind meeting/pause/off hours reads "Break", not "0 min"; a running break shows minutes.
+        for status in [WorkStatus.meeting, .paused, .offHours] {
+            XCTAssertEqual(MenuBarStatusFormatter(status: status, remaining: 0, breakDue: true).textKey, "menubar.due")
+        }
+        XCTAssertEqual(MenuBarStatusFormatter(status: .meeting, remaining: 0).textKey, "menubar.minutes")
         // Tooltip/accessibility summary always carries status and remaining time, in either style.
         let table = ["app.name": "Kıpır", "status.offHours": "Mesai dışı", "menubar.minutes": "%d dk"]
         let summary = MenuBarStatusFormatter(status: .offHours, remaining: 600, iconOnly: true).summary { table[$0] ?? $0 }
         XCTAssertEqual(summary, "Kıpır, Mesai dışı, 10 dk")
         XCTAssertEqual(MenuBarStatusFormatter(status: .working, remaining: .infinity).minutes, 0)
+    }
+
+    // MARK: Countdown ring (pre-release Fix 1)
+
+    func testRemainingFractionStartsFullAndDepletesExactlyToZero() {
+        let c = Clock(); var s = Settings(); s.work = 400
+        let e = c.engine(s)
+        XCTAssertEqual(e.remainingFraction, 1)
+        for expected in [0.75, 0.5, 0.25, 0.0] {
+            c.step(e, seconds: 100); XCTAssertEqual(e.remainingFraction, expected, accuracy: 1e-9)
+        }
+        XCTAssertEqual(e.status, .due)
+        c.step(e, seconds: 30); XCTAssertEqual(e.remainingFraction, 0, "Due never goes negative or wraps to full")
+        XCTAssertEqual(CountdownRingMath.clamped(.nan), 0); XCTAssertEqual(CountdownRingMath.clamped(2), 1)
+        XCTAssertEqual(CountdownRingMath.clamped(-1), 0)
+    }
+    func testRemainingFractionFreezesOnPauseAndSuspensionAndResumesWithoutDrift() {
+        // Natural break off: a 900 s sleep would otherwise (correctly) restart the interval.
+        let c = Clock(); var s = Settings(); s.work = 400; s.naturalBreak = 0
+        let e = c.engine(s); c.step(e, seconds: 100)
+        e.perform(.togglePause); c.step(e, seconds: 250)
+        XCTAssertEqual(e.remainingFraction, 0.75, accuracy: 1e-9)
+        e.perform(.togglePause); c.step(e, seconds: 100)
+        XCTAssertEqual(e.remainingFraction, 0.5, accuracy: 1e-9)
+        e.setSuspended(true); c.time += 900; c.date += 900; e.setSuspended(false)
+        XCTAssertEqual(e.remainingFraction, 0.5, accuracy: 1e-9, "sleep is never credited")
+        let restored = c.engine(s, checkpoint: e.checkpoint)
+        XCTAssertEqual(restored.remainingFraction, 0.5, accuracy: 1e-9, "restart restores the same position")
+    }
+    func testRemainingFractionForSnoozeBreakSettingsChangeAndMeeting() {
+        let c = Clock(); var s = Settings(); s.work = 60; s.snooze = 60
+        let e = c.engine(s); c.step(e, seconds: 60)
+        XCTAssertEqual(e.remainingFraction, 0)
+        e.perform(.snooze); XCTAssertEqual(e.remainingFraction, 1, "a snooze refills the ring")
+        c.step(e, seconds: 30); XCTAssertEqual(e.remainingFraction, 0.5, accuracy: 1e-9)
+        c.step(e, seconds: 30); e.perform(.startBreak)
+        XCTAssertEqual(e.remainingFraction, 1)
+        c.step(e, seconds: 60, input: false); XCTAssertEqual(e.remainingFraction, 0.5, accuracy: 1e-9)
+        c.step(e, seconds: 60, input: false)
+        XCTAssertEqual(e.checkpoint.phase, .working); XCTAssertEqual(e.remainingFraction, 1)
+        s.work = 400; e.updateSettings(s); c.step(e, seconds: 100)
+        XCTAssertEqual(e.remainingFraction, 0.75, accuracy: 1e-9)
+        s.work = 200; e.updateSettings(s); XCTAssertEqual(e.remainingFraction, 0.5, accuracy: 1e-9)
+        e.setMeeting(true); c.step(e, seconds: 50)
+        XCTAssertEqual(e.remainingFraction, 0.25, accuracy: 1e-9, "meeting mode keeps the ring moving")
+    }
+
+    // MARK: Menu bar geometry (pre-release Fix 2)
+
+    private func strings(_ language: String) -> [String: String] {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+        let url = root.appendingPathComponent("Kipir/Resources/\(language).lproj/Localizable.strings")
+        return (NSDictionary(contentsOf: url) as? [String: String]) ?? [:]
+    }
+    func testMenuBarTextSlotFitsEveryStateCountdownAndLanguage() {
+        let tables = [strings("tr"), strings("en")]
+        XCTAssertFalse(tables[0].isEmpty); XCTAssertFalse(tables[1].isEmpty)
+        let candidates = MenuBarLabelLayout.candidates(tables: tables)
+        for expected in ["888 dk", "888 min", "Mola", "Break"] { XCTAssertTrue(candidates.contains(expected), expected) }
+        // Proportional stand-in for the font: wider strings measure wider.
+        let measure: (String) -> Double = { Double($0.count) * 7.3 }
+        let slot = MenuBarLabelLayout.textSlotWidth(candidates: candidates, measure: measure)
+        let statuses: [WorkStatus] = [.working, .idle, .paused, .meeting, .due, .onBreak, .suspended, .offHours]
+        for table in tables {
+            for status in statuses {
+                for remaining in [14401.0, 3600, 3599, 600, 599, 61, 60, 59, 1, 0] {
+                    let text = MenuBarStatusFormatter(status: status, remaining: remaining).text { table[$0] ?? $0 }
+                    XCTAssertLessThanOrEqual(measure(text), slot, "\(status) \(remaining) \(text)")
+                }
+            }
+        }
+        // The label's total width depends only on the style, never on state, countdown or language.
+        XCTAssertEqual(MenuBarLabelLayout.totalWidth(textSlot: slot, iconOnly: false),
+                       MenuBarLabelLayout.iconSlot + MenuBarLabelLayout.gap + slot)
+        XCTAssertEqual(MenuBarLabelLayout.totalWidth(textSlot: slot, iconOnly: true), MenuBarLabelLayout.iconSlot)
+        XCTAssertEqual(MenuBarLabelLayout.textSlotWidth(candidates: ["a"], measure: { _ in .nan }), 1)
+        XCTAssertEqual(MenuBarLabelLayout.textSlotWidth(candidates: ["ab"], measure: { _ in 10.2 }), 12)
+    }
+
+    // MARK: Language and appearance preferences (pre-release Feature 6, Fix 4)
+
+    func testLanguageResolutionHonorsExplicitChoiceSystemOrderAndFallback() {
+        XCTAssertEqual(AppLanguage.resolve(preference: nil, preferredLanguages: ["tr-TR"]), "tr")
+        XCTAssertEqual(AppLanguage.resolve(preference: nil, preferredLanguages: ["en-GB", "tr-TR"]), "en")
+        XCTAssertEqual(AppLanguage.resolve(preference: "system", preferredLanguages: ["de-DE", "tr_TR"]), "tr")
+        XCTAssertEqual(AppLanguage.resolve(preference: nil, preferredLanguages: ["de-DE", "fr-FR"]), "en")
+        XCTAssertEqual(AppLanguage.resolve(preference: nil, preferredLanguages: []), "en")
+        XCTAssertEqual(AppLanguage.resolve(preference: "tr", preferredLanguages: ["en-US"]), "tr")
+        XCTAssertEqual(AppLanguage.resolve(preference: "en", preferredLanguages: ["tr-TR"]), "en")
+        XCTAssertEqual(AppLanguage.resolve(preference: "xx", preferredLanguages: ["TR"]), "tr")
+        XCTAssertEqual(AppLanguage.normalizedPreference(nil), "system")
+        XCTAssertEqual(AppLanguage.normalizedPreference("bogus"), "system")
+        XCTAssertEqual(AppLanguage.normalizedPreference("en"), "en")
+    }
+    func testAppearancePreferencePersistsAndInvalidValuesRecover() {
+        let suite = "KipirAppearance.\(UUID().uuidString)"; let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = LocalStore(defaults: defaults)
+        for value in ["light", "dark", "system"] {
+            var s = Settings(); s.appearance = value; store.save(s)
+            XCTAssertEqual(store.loadSettings().appearance, value)
+        }
+        var s = Settings(); s.appearance = "purple"; store.save(s)
+        XCTAssertEqual(store.loadSettings().appearance, "system")
     }
 
     // MARK: Break durations
@@ -266,3 +375,102 @@ final class PresentationTests: XCTestCase {
         XCTAssertEqual(s.validated().workingHours.start, 22 * 60)
     }
 }
+
+#if !SWIFT_PACKAGE
+import AppKit
+import SwiftUI
+import UserNotifications
+
+/// Native checks that need the app sources compiled into the Xcode test target.
+final class PreReleaseNativeTests: XCTestCase {
+    /// Renders the real ring and samples its pixels: the arc is anchored at 12 o'clock and the missing part is
+    /// always just counterclockwise of 12, so depletion runs counterclockwise.
+    @MainActor func testCountdownRingDrawsRemainingArcClockwiseFromTwelve() throws {
+        func alphaSamples(_ fraction: Double) throws -> [String: Double] {
+            let renderer = ImageRenderer(content: CountdownRing(fraction: fraction, lineWidth: 8)
+                .frame(width: 100, height: 100).padding(4).environment(\.colorScheme, .light))
+            renderer.scale = 1
+            let image = try XCTUnwrap(renderer.cgImage)
+            let width = image.width, height = image.height
+            var pixels = [UInt8](repeating: 0, count: width * height * 4)
+            let context = try XCTUnwrap(CGContext(data: &pixels, width: width, height: height, bitsPerComponent: 8,
+                bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+            context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+            // Clock positions measured clockwise from 12; rows run top to bottom in `pixels`.
+            var result: [String: Double] = [:]
+            for (name, degrees) in [("1:30", 45.0), ("4:30", 135.0), ("7:30", 225.0), ("10:30", 315.0)] {
+                let radians = degrees * .pi / 180, radius = 50.0
+                let x = Int((54 + radius * sin(radians)).rounded()), y = Int((54 - radius * cos(radians)).rounded())
+                result[name] = Double(pixels[(y * width + x) * 4 + 3]) / 255
+            }
+            return result
+        }
+        let full = try alphaSamples(1), threeQuarters = try alphaSamples(0.75)
+        let quarter = try alphaSamples(0.25), empty = try alphaSamples(0)
+        for position in ["1:30", "4:30", "7:30", "10:30"] { XCTAssertGreaterThan(full[position]!, 0.8, position) }
+        // 75 % left: the quarter just counterclockwise of 12 (the 9-12 quadrant) has gone.
+        XCTAssertLessThan(threeQuarters["10:30"]!, 0.5)
+        for position in ["1:30", "4:30", "7:30"] { XCTAssertGreaterThan(threeQuarters[position]!, 0.8, position) }
+        // 25 % left: only the 12-3 quadrant remains.
+        XCTAssertGreaterThan(quarter["1:30"]!, 0.8)
+        for position in ["4:30", "7:30", "10:30"] { XCTAssertLessThan(quarter[position]!, 0.5, position) }
+        // Empty: only the faint track remains.
+        for position in ["1:30", "4:30", "7:30", "10:30"] {
+            XCTAssertLessThan(empty[position]!, 0.5, position); XCTAssertGreaterThan(empty[position]!, 0, "track stays visible")
+        }
+    }
+
+    /// The 2x bitmap must be drawn at 2x: content reaches the right and top halves, and size never varies.
+    @MainActor func testStatusLabelImageIsConstantSizeAndDrawnAtFullScale() throws {
+        let font = NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .regular)
+        let slot = CGFloat(MenuBarLabelLayout.textSlotWidth(candidates: ["888 min"]) {
+            Double(($0 as NSString).size(withAttributes: [.font: font]).width)
+        })
+        var sizes = Set<String>()
+        for (symbol, text) in [("figure.walk", "45 min"), ("pause.fill", "888 min"), ("person.2", "Mola"), ("moon", "1 dk")] {
+            let image = StatusLabelImage.make(symbol: symbol, text: text, textSlot: slot, font: font, scale: 2)
+            sizes.insert("\(image.size.width)x\(image.size.height)")
+            XCTAssertTrue(image.isTemplate)
+            let rep = try XCTUnwrap(image.representations.first as? NSBitmapImageRep)
+            XCTAssertEqual(rep.pixelsWide, Int(ceil(image.size.width * 2)))
+            var maxX = 0, minY = Int.max
+            for y in 0..<rep.pixelsHigh { for x in 0..<rep.pixelsWide where (rep.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0.5 {
+                maxX = max(maxX, x); minY = min(minY, y)
+            } }
+            if text == "888 min" { XCTAssertGreaterThan(maxX, rep.pixelsWide * 3 / 4, "text fills the slot at 2x") }
+            XCTAssertLessThan(minY, rep.pixelsHigh / 2, "\(symbol): content reaches the top half (rows run top-down)")
+        }
+        XCTAssertEqual(sizes.count, 1, "label size must not depend on state or text")
+        let iconOnly = StatusLabelImage.make(symbol: "figure.walk", text: nil, textSlot: slot, font: font, scale: 2)
+        XCTAssertEqual(iconOnly.size.width, CGFloat(MenuBarLabelLayout.iconSlot))
+    }
+
+    func testNotificationClickRoutesToPanelAndActionsToSchedulerOnly() {
+        let id = UUID()
+        XCTAssertEqual(NotificationManager.route(actionIdentifier: UNNotificationDefaultActionIdentifier,
+                                                 requestIdentifier: id.uuidString), .openPanel)
+        XCTAssertEqual(NotificationManager.route(actionIdentifier: UNNotificationDefaultActionIdentifier,
+                                                 requestIdentifier: "kipir.test.\(UUID().uuidString)"), .openPanel,
+                       "the user-initiated test notification opens the same panel")
+        XCTAssertEqual(NotificationManager.route(actionIdentifier: "start", requestIdentifier: id.uuidString),
+                       .perform(id, .startBreak))
+        XCTAssertEqual(NotificationManager.route(actionIdentifier: "snooze", requestIdentifier: id.uuidString),
+                       .perform(id, .snooze))
+        XCTAssertEqual(NotificationManager.route(actionIdentifier: "start", requestIdentifier: "kipir.test.x"), .ignore)
+        XCTAssertEqual(NotificationManager.route(actionIdentifier: UNNotificationDismissActionIdentifier,
+                                                 requestIdentifier: id.uuidString), .ignore)
+        XCTAssertEqual(NotificationManager.route(actionIdentifier: "other", requestIdentifier: id.uuidString), .ignore)
+    }
+
+    func testLanguagePreferencePersistsAndSystemDefaultFollowsPreferredLanguages() {
+        let suite = "KipirLanguage.\(UUID().uuidString)"; let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let system = AppLanguage.resolve(preference: nil, preferredLanguages: Locale.preferredLanguages)
+        XCTAssertEqual(currentLanguage(defaults: defaults), system)
+        defaults.set("en", forKey: "language"); XCTAssertEqual(currentLanguage(defaults: defaults), "en")
+        defaults.set("tr", forKey: "language"); XCTAssertEqual(currentLanguage(defaults: defaults), "tr")
+        defaults.removeObject(forKey: "language"); XCTAssertEqual(currentLanguage(defaults: defaults), system)
+    }
+}
+#endif

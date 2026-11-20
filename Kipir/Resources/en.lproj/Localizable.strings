@@ -37,7 +37,7 @@
 "setting.snooze" = "Snooze";
 "unit.minutes" = "min";
 "unit.seconds" = "sec";
-"settings.accounting" = "Short periods without input are confirmed by the next activity. Long inactivity, sleep and meetings do not count. Changing settings does not affect the current break’s duration.";
+"settings.accounting" = "Short periods without input are confirmed by the next activity. Long inactivity and sleep do not count; meeting mode only silences notifications. Changing settings does not affect the current break’s duration.";
 "settings.notifications" = "Notifications";
 "setting.notifications" = "Break notifications";
 "setting.sound" = "Notification sound";
@@ -78,12 +78,10 @@
 "pose.start" = "Start";
 "pose.end" = "Movement";
 "setting.language" = "Language";
+"language.system" = "System Default";
 
 "menubar.minutes" = "%d min";
 "menubar.due" = "Break";
-"menubar.break" = "Break %d min";
-"menubar.meeting" = "Meeting";
-"menubar.suspended" = "Suspended";
 "notification.test.button" = "Test Notification";
 "notification.test.title" = "Kıpır notification test";
 "notification.test.body" = "This is a Kıpır test notification. We'll remind you when it's time to move.";
@@ -113,7 +111,6 @@
 
 /* ==== 0.2 contracts (orchestrator) ==== */
 "status.offHours" = "Off hours";
-"menubar.offHours" = "Off hours";
 
 /* ==== Scheduler workstream: add keys only between these markers ==== */
 "ui.naturalBreak.effective" = "With your current idle threshold: at least %d min.";
@@ -153,7 +150,7 @@
 "ui.duration.custom" = "Custom (%@)";
 "ui.status.note.idle" = "No recent input; this time isn't counted.";
 "ui.status.note.paused" = "Paused by you; the timer is waiting.";
-"ui.status.note.meeting" = "Meeting mode is on; the timer is frozen.";
+"ui.status.note.meeting" = "Meeting mode is on; notifications are silenced and the timer keeps running.";
 "ui.status.note.suspended" = "Screen locked or Mac asleep; work time isn't counted.";
 "ui.status.note.offHours" = "Outside working hours; time isn't counted and no reminders are sent.";
 "ui.status.note.due" = "Break time. Start now or snooze.";

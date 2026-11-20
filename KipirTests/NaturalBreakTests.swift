@@ -123,15 +123,16 @@ final class NaturalBreakTests: XCTestCase {
         XCTAssertEqual(e.activeWork, 0); XCTAssertNil(e.reminderID)
         c.step(e); XCTAssertTrue(e.consumeNaturalBreak())
     }
-    func testMeetingModeDoesNotAccrueAndChainNeedsFreshInput() {
+    func testMeetingModeKeepsNormalIdleAndNaturalBreakRules() {
+        // Meeting mode is orthogonal to timing (DECISIONS 028): a long no-input meeting is an ordinary away span.
         let c = clock(); let e = c.engine(); c.step(e, seconds: 20)
-        e.perform(.toggleMeeting); c.step(e, seconds: 700, input: false)
-        XCTAssertEqual(e.activeWork, 20)
-        e.perform(.toggleMeeting)
-        c.step(e, seconds: 700, input: false)       // chain tainted: no input since the meeting
-        XCTAssertEqual(e.activeWork, 20)
-        c.step(e); c.step(e, seconds: 599, input: false); XCTAssertEqual(e.activeWork, 21)
-        c.step(e, seconds: 1, input: false); XCTAssertEqual(e.activeWork, 0)
+        e.perform(.toggleMeeting); c.step(e, seconds: 599, input: false)
+        XCTAssertEqual(e.activeWork, 20); XCTAssertEqual(e.status, .meeting)
+        c.step(e, seconds: 1, input: false); XCTAssertEqual(e.activeWork, 0); XCTAssertTrue(e.meeting)
+        c.step(e); XCTAssertTrue(e.consumeNaturalBreak())
+        // Toggling meeting mode off does not taint the chain either.
+        e.perform(.toggleMeeting); c.step(e, seconds: 600, input: false)
+        XCTAssertEqual(e.activeWork, 0); c.step(e); XCTAssertTrue(e.consumeNaturalBreak())
     }
     func testPauseAndResumeDoNotAccrueAndRestartChain() {
         let c = clock(); let e = c.engine(); c.step(e, seconds: 20)
@@ -542,12 +543,12 @@ final class NaturalBreakTests: XCTestCase {
         XCTAssertEqual(e.status, .offHours)
         e.perform(.startBreak); XCTAssertEqual(e.status, .onBreak)
     }
-    func testMeetingAndPauseKeepOverridingInsideWindow() {
+    func testPauseOverridesAndMeetingKeepsCountingInsideWindow() {
         let c = clock(); let e = c.engine(settings(hours: hours())); c.step(e, seconds: 10)
         e.perform(.togglePause); c.step(e, seconds: 30); XCTAssertEqual(e.activeWork, 10)
         e.perform(.togglePause); e.perform(.toggleMeeting)
-        c.step(e, seconds: 30); XCTAssertEqual(e.activeWork, 10); XCTAssertEqual(e.status, .meeting)
-        e.perform(.toggleMeeting); c.step(e, seconds: 2); XCTAssertEqual(e.activeWork, 12)
+        c.step(e, seconds: 30); XCTAssertEqual(e.activeWork, 40); XCTAssertEqual(e.status, .meeting)
+        e.perform(.toggleMeeting); c.step(e, seconds: 2); XCTAssertEqual(e.activeWork, 42)
     }
     func testTogglingWorkingHoursInSettingsRebaselines() {
         let c = clock(at: { self.local($0, 2027, 1, 15, 22, 0) }); let e = c.engine(); c.step(e, seconds: 10)

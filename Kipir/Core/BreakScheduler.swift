@@ -21,6 +21,8 @@ final class BreakScheduler {
     private var naturalResetPending = false
     private var naturalNoticeReady = false
     private static let inputTolerance = 0.05
+    /// The deliverable reminder. Meeting mode only withholds delivery; the Due episode itself still exists
+    /// (`checkpoint.dueID`) and the timer keeps running (DECISIONS 028).
     var reminderID: UUID? {
         saved.phase == .due && !paused && !meeting && !suspended && inWindow ? saved.dueID : nil
     }
@@ -64,9 +66,22 @@ final class BreakScheduler {
         }
         return min(1, max(0, activeWork / max(1, saved.target)))
     }
+    /// Share of the current countdown still left, 1 at its start and 0 when it reaches zero; the popover ring
+    /// draws exactly this. A snoozed interval counts down from the snooze length rather than the whole target.
+    var remainingFraction: Double {
+        let total: TimeInterval
+        if saved.phase == .onBreak { total = saved.breakDuration }
+        else { total = saved.snoozed ? settings.snooze : saved.target }
+        guard total.isFinite, total > 0, remaining.isFinite else { return 0 }
+        return min(1, max(0, remaining / total))
+    }
+    /// A Due episode the user can act on from the panel: also while meeting mode silences the reminder.
+    var breakDueActionable: Bool { saved.phase == .due && (status == .due || status == .meeting) }
     var status: WorkStatus {
         if suspended { return .suspended }
         if paused { return .paused }
+        // A running break stays visible as a break; meeting mode only silences interruptions.
+        if saved.phase == .onBreak { return .onBreak }
         if meeting { return .meeting }
         if !inWindow && saved.phase != .onBreak { return .offHours }
         switch saved.phase {
@@ -80,8 +95,8 @@ final class BreakScheduler {
         let t = now(), i = idle()
         let changedDay = rollover()
         defer { refreshReminder() }
-        // Expiration resumes only from a fresh baseline, never credits the frozen crossing sample.
-        if reconcileMeeting() { dropAwayChain(); baseline(); return }
+        // Meeting mode never freezes time, so its expiration needs no rebaseline (DECISIONS 028).
+        reconcileMeeting()
         // Entering or leaving the working window rebaselines like meeting expiration; the crossing sample is discarded.
         // A break already in progress keeps counting down (DECISIONS 019), so its sample is not discarded.
         // Entering the window starts a new working period: a stale interval or Due episode restarts (DECISIONS 025).
@@ -100,7 +115,10 @@ final class BreakScheduler {
         // The away chain may continue across a day rollover; only work credit is withheld for that sample.
         if trackAway(delta: delta, oldIdle: oldIdle, idle: i) { pending = 0; return }
         guard !changedDay else { pending = 0; return }
-        guard delta > 0, delta <= 10, !suspended, !paused, !meeting else { pending = 0; return }
+        // A repeated sample at the same instant carries no information; keep the unconfirmed span intact so
+        // back-to-back calls (for example rapid meeting toggles) never discard credit.
+        if delta == 0 { return }
+        guard delta > 0, delta <= 10, !suspended, !paused else { pending = 0; return }
         switch saved.phase {
         case .onBreak:
             pending = 0
@@ -131,7 +149,7 @@ final class BreakScheduler {
         tick()
         switch action {
         case .startBreak:
-            guard !paused, !meeting, !suspended, saved.phase != .onBreak else { return }
+            guard !paused, !suspended, saved.phase != .onBreak else { return }
             clearNaturalNotice()
             saved.isLongBreak = nextBreakIsLong
             saved.breakDuration = saved.isLongBreak ? settings.longBreak : settings.shortBreak
@@ -141,7 +159,7 @@ final class BreakScheduler {
             saved.breakFocus = settings.exerciseFocus
             exercises = makeExercises(elapsed: 0)
         case .snooze:
-            guard saved.phase == .due, !paused, !meeting, !suspended else { return }
+            guard saved.phase == .due, !paused, !suspended else { return }
             saved.target = saved.activeWork + settings.snooze
             saved.snoozed = true; saved.phase = .working
         case .skip:
@@ -177,7 +195,8 @@ final class BreakScheduler {
         saved.meeting = enabled
         saved.meetingDeadline = enabled ? duration.map { date().addingTimeInterval($0) } : nil
         reconcileMeeting()
-        baseline(); refreshReminder()
+        // No rebaseline: toggling meeting mode must not drop unconfirmed credit or the away chain.
+        refreshReminder()
     }
 
     @discardableResult private func reconcileMeeting() -> Bool {
@@ -186,7 +205,7 @@ final class BreakScheduler {
         let remaining = deadline.timeIntervalSince(date())
         // A backward clock jump beyond the supported one-hour horizon cancels timed mode.
         guard remaining.isFinite, remaining > 0, remaining <= 3600 else {
-            saved.meeting = false; saved.meetingDeadline = nil; pending = 0; return true
+            saved.meeting = false; saved.meetingDeadline = nil; return true
         }
         return false
     }
@@ -243,7 +262,7 @@ final class BreakScheduler {
         if !canAccrueAway { dropAwayChain() }
     }
     private var canAccrueAway: Bool {
-        (saved.phase == .working || saved.phase == .due) && !paused && !meeting && inWindow
+        (saved.phase == .working || saved.phase == .due) && !paused && inWindow
     }
     private func dropAwayChain() { awayOpen = false; away = 0 }
     private func armNaturalNotice() {

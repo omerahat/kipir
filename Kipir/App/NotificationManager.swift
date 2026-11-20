@@ -55,6 +55,23 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     }
     var onChange: (() -> Void)?
     var onAction: ((UUID, SchedulerAction) -> Void)?
+    /// A notification body was clicked: show the main popover.
+    var onOpen: (() -> Void)?
+
+    /// What a notification response means. Clicking the body of any Kıpır notification (a reminder or the
+    /// user-initiated test) opens the panel; action buttons map to scheduler actions for a reminder episode only.
+    enum Route: Equatable { case openPanel, perform(UUID, SchedulerAction), ignore }
+    nonisolated static func route(actionIdentifier: String, requestIdentifier: String) -> Route {
+        if actionIdentifier == UNNotificationDefaultActionIdentifier { return .openPanel }
+        guard let id = UUID(uuidString: requestIdentifier) else { return .ignore }
+        switch actionIdentifier {
+        case "start": return .perform(id, .startBreak)
+        case "snooze": return .perform(id, .snooze)
+        case "skip": return .perform(id, .skip)
+        case "pause": return .perform(id, .togglePause)
+        default: return .ignore
+        }
+    }
 
     init(delivery: NotificationDelivery? = nil, defaults: UserDefaults = .standard) {
         self.delivery = delivery ?? SystemNotificationDelivery()
@@ -99,6 +116,13 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         }
     }
     func sync(engine: BreakScheduler) {
+        // Meeting mode consumes the current episode's reminder so ending the meeting never replays it.
+        let marked = NotificationPolicy.markingMeetingSuppressed(sent: lastAttempted, meeting: engine.meeting,
+                                                                 dueID: engine.checkpoint.dueID)
+        if marked != lastAttempted {
+            lastAttempted = marked
+            defaults.set(marked?.uuidString, forKey: "lastNotificationAttempt")
+        }
         let due = engine.reminderID
         if let visible, visible != due || !engine.settings.notifications {
             delivery.remove(visible.uuidString)
@@ -126,7 +150,8 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
             } catch { errorKey = "notification.deliveryError"; errorDetail = nil; onChange?() }
         }
     }
-    // This path never synchronizes or mutates a real reminder episode.
+    // This path never synchronizes or mutates a real reminder episode. It is deliberately not silenced by meeting
+    // mode: it only runs from an explicit click on "Test Notification".
     func testNotification(enabled: () -> Bool, sound: Bool) async {
         guard !testing else { return }
         testing = true; testResultKey = nil; onChange?()
@@ -172,19 +197,13 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     }
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse) async {
-        let identifier = response.notification.request.identifier
-        let action = response.actionIdentifier
+        let route = Self.route(actionIdentifier: response.actionIdentifier,
+                               requestIdentifier: response.notification.request.identifier)
         await MainActor.run {
-            if let id = UUID(uuidString: identifier) {
-                let mapped: SchedulerAction?
-                switch action {
-                case "start": mapped = .startBreak
-                case "snooze": mapped = .snooze
-                case "skip": mapped = .skip
-                case "pause": mapped = .togglePause
-                default: mapped = nil
-                }
-                if let mapped { self.onAction?(id, mapped) }
+            switch route {
+            case .openPanel: self.onOpen?()
+            case .perform(let id, let action): self.onAction?(id, action)
+            case .ignore: break
             }
         }
     }

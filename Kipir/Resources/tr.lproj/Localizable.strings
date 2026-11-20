@@ -37,7 +37,7 @@
 "setting.snooze" = "Erteleme";
 "unit.minutes" = "dk";
 "unit.seconds" = "sn";
-"settings.accounting" = "Girdi olmayan kısa süreler, bir sonraki etkinlikle doğrulanır. Uzun hareketsizlik, uyku ve toplantı süresi sayılmaz. Devam eden molanın süresi ayar değişikliğinden etkilenmez.";
+"settings.accounting" = "Girdi olmayan kısa süreler, bir sonraki etkinlikle doğrulanır. Uzun hareketsizlik ve uyku sayılmaz; toplantı modu yalnızca bildirimleri susturur. Devam eden molanın süresi ayar değişikliğinden etkilenmez.";
 "settings.notifications" = "Bildirimler";
 "setting.notifications" = "Mola bildirimleri";
 "setting.sound" = "Bildirim sesi";
@@ -79,12 +79,10 @@
 "pose.end" = "Hareket";
 
 "setting.language" = "Dil";
+"language.system" = "Sistem varsayılanı";
 
 "menubar.minutes" = "%d dk";
 "menubar.due" = "Mola";
-"menubar.break" = "Mola %d dk";
-"menubar.meeting" = "Toplantı";
-"menubar.suspended" = "Beklemede";
 "notification.test.button" = "Bildirimi dene";
 "notification.test.title" = "Kıpır bildirim testi";
 "notification.test.body" = "Bu bir Kıpır test bildirimidir. Mola zamanı geldiğinde burada haber vereceğiz.";
@@ -114,7 +112,6 @@
 
 /* ==== 0.2 contracts (orchestrator) ==== */
 "status.offHours" = "Mesai dışı";
-"menubar.offHours" = "Mesai dışı";
 
 /* ==== Scheduler workstream: add keys only between these markers ==== */
 "ui.naturalBreak.effective" = "Şu anki hareketsizlik eşiğiyle en az %d dk.";
@@ -154,7 +151,7 @@
 "ui.duration.custom" = "Özel (%@)";
 "ui.status.note.idle" = "Bir süredir girdi yok; bu süre sayılmıyor.";
 "ui.status.note.paused" = "Sen duraklattın; sayaç bekliyor.";
-"ui.status.note.meeting" = "Toplantı modu açık; sayaç donduruldu.";
+"ui.status.note.meeting" = "Toplantı modu açık; bildirimler susturuldu, sayaç çalışmaya devam ediyor.";
 "ui.status.note.suspended" = "Ekran kilitli veya Mac uykuda; çalışma süresi sayılmıyor.";
 "ui.status.note.offHours" = "Çalışma saatleri dışında; süre sayılmıyor, hatırlatma yapılmıyor.";
 "ui.status.note.due" = "Mola zamanı geldi. Şimdi başlayabilir ya da erteleyebilirsin.";

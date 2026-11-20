@@ -1,36 +1,18 @@
 import SwiftUI
 
+/// The menu bar item, popover and Settings window are AppKit-owned (`StatusBarController`): SwiftUI's
+/// `MenuBarExtra` offers no stable label geometry, no programmatic presentation and no appearance control for its
+/// window. The empty Settings scene only satisfies `App`; its menu command opens Kıpır's own Settings window.
 @main
 struct KipirApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
-    @StateObject private var controller = AppController.shared
     var body: some Scene {
-        MenuBarExtra {
-            MenuBarView(controller: controller).preferredColorScheme(controller.colorScheme)
-                .environment(\.locale, Locale(identifier: controller.language))
-        } label: {
-            let status = MenuBarStatusFormatter(status: controller.engine.status, remaining: controller.engine.remaining,
-                                                iconOnly: controller.settings.menuBarStyle == "icon")
-            let summary = status.summary(L)
-            Group {
-                if status.showsText, let key = status.textKey {
-                    Label {
-                        // Only the minute countdown reserves width (avoids jitter); other labels size to content.
-                        Text(String(format: L(key), status.minutes)).monospacedDigit()
-                            .frame(minWidth: key == "menubar.minutes" ? 64 : nil, alignment: .leading)
-                    } icon: { Image(systemName: status.symbol) }
-                    .labelStyle(.titleAndIcon)
-                } else {
-                    Image(systemName: status.symbol)
+        SwiftUI.Settings { EmptyView() }
+            .commands {
+                CommandGroup(replacing: .appSettings) {
+                    Button(L("settings")) { delegate.statusBar?.openSettings() }
+                        .keyboardShortcut(",", modifiers: .command)
                 }
             }
-            .help(summary)
-            .accessibilityLabel(summary)
-        }
-        .menuBarExtraStyle(.window)
-        SwiftUI.Settings {
-            SettingsView(controller: controller).preferredColorScheme(controller.colorScheme)
-                .environment(\.locale, Locale(identifier: controller.language))
-        }
     }
 }

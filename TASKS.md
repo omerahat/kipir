@@ -112,3 +112,15 @@ Automated evidence is in TESTING.md ("0.2 integration"); unchecked items need a 
 - [x] Distribution decision: Homebrew with ad hoc signing (DECISIONS 027). Developer ID/notarization is not planned; `Scripts/release-developer-id.sh` stays as an optional future path.
 - [x] 0.2.0 packaged (`WRITE_CASK=1 bash Scripts/package-release.sh`), published as GitHub release v0.2.0, cask updated.
 - [ ] Install/upgrade 0.2.0 via `brew upgrade --cask omerahat/kipir/kipir` on a real Mac and run the TESTING.md manual checklist.
+
+## Pre-release stabilization (2026-11-20)
+- [x] Countdown ring depletes counterclockwise from full to empty (math + pixel-render tests).
+- [x] Fixed-width status item; AppKit status item/popover/Settings window (DECISIONS 030).
+- [x] Meeting mode silences notifications and sounds only; no replay (DECISIONS 028).
+- [x] One appearance source for popover and Settings.
+- [x] Notification body click opens the main panel (routing tested; open queued before launch completes).
+- [x] Language System Default, English bundle localization, extended localization checks (DECISIONS 029).
+- [ ] On-device verification: popover position during state changes, Light/Dark on both surfaces, real notification click, bilingual walkthrough, restart, keyboard/VoiceOver (docs/pre-release/03).
+- [ ] Independent Codex review of the stabilization diff (docs/pre-release/06).
+- [ ] Native Turkish review of the changed strings (`ui.status.note.meeting`, `settings.accounting`, `language.system`).
+

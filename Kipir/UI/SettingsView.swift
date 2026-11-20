@@ -194,7 +194,8 @@ struct SettingsView: View {
 
     private var generalSection: some View {
         Section(L("settings.general")) {
-            Picker(L("setting.language"), selection: Binding(get: { controller.language }, set: { controller.setLanguage($0) })) {
+            Picker(L("setting.language"), selection: Binding(get: { controller.languagePreference }, set: { controller.setLanguage($0) })) {
+                Text(L("language.system")).tag("system")
                 Text(verbatim: "Türkçe").tag("tr")
                 Text(verbatim: "English").tag("en")
             }
