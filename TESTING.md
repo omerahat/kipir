@@ -227,3 +227,13 @@ Replaced the Canvas figure with generated two-pose illustrations (DECISIONS 026)
 - `python3 Scripts/test-localization.py`: OK.
 - Contact sheet of all start/end pairs inspected (`docs/exercise-poses-review.png`, not committed): consistent character, no clipping except the chest-opening hands reaching the crop edge.
 - MANUAL REVIEW REQUIRED: live crossfade playback in the popover, dark-mode appearance of the white card, Reduce Motion pair, and human review of pose accuracy.
+
+## Pre-release stabilization — 2026-11-20
+Commands run from the repository root; derived data and logs are in the session scratchpad (the real `build/` folder was not used).
+- Baseline before changes: `swift test --scratch-path <scratch>/spm` **157/157 PASS**; `xcodebuild -project Kipir.xcodeproj -scheme Kipir -configuration Debug -derivedDataPath <scratch>/dd CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual CODE_SIGNING_ALLOWED=YES test` **164/164 TEST SUCCEEDED**.
+- Final: `swift test …` **165/165 PASS**; the same `xcodebuild … test` **177/177 TEST SUCCEEDED**; `xcodebuild … -configuration Release -derivedDataPath <fresh> build` **BUILD SUCCEEDED**, 0 Swift warnings (`\.swift:N:N: warning:` grep); the menu bar bitmap was also rendered to a PNG offscreen and inspected (correct 2× drawing, one size); `KIPIR_BUILT_APP=<scratch>/dd/Build/Products/Debug/Kipir.app python3 -I Scripts/test-localization.py` **6/6 OK**.
+- Intermediate failures, all corrected: 9 existing tests asserted the old meeting freeze and were rewritten to DECISIONS 028. One new test forgot that a 900 s sleep is a natural break; natural break was disabled in that test.
+- Device evidence (partial): an isolated copy (`PRODUCT_BUNDLE_IDENTIFIER=com.omerahat.kipir.verify`; the installed app and its defaults were untouched, and the verify domain was deleted afterwards) launched. Its status item read `69×24` pt at the same x across Turkish → English → System → Turkish (72 pt at first launch, consistent with system spacing). The popover opened once at 330 pt.
+- Scripted clicking was abandoned: it triggered a screen-recording permission prompt on the owner's desktop, and AX-press opening closed the popover almost immediately. The cause is unknown. If activation is being refused, a notification click while Kıpır is inactive could look dead, so check that first with a real click.
+- MANUAL REVIEW REQUIRED: everything marked NOT TESTED/BLOCKED in `docs/pre-release/03-test-matrix.md`, in particular the popover position during pause/meeting/break transitions, Light/Dark on both surfaces, real notification click (closed, open, cold launch, Settings open), the bilingual walkthrough, and keyboard shortcuts in the break guide.
+

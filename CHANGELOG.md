@@ -1,5 +1,14 @@
 # Kıpır — Changelog
 
+## Unreleased — Pre-release stabilization (not released)
+- The countdown ring now starts full and empties counterclockwise from 12 o'clock, reaching empty exactly at zero; a snooze refills it.
+- The menu bar item has a fixed width in every state and language: it always shows the remaining minutes (or "Break"), with the state in the icon. The panel no longer jumps sideways on pause, resume or meeting toggles (DECISIONS 030).
+- Meeting mode only silences notifications and the break-completion sound; the timer, statistics and breaks keep running. Reminders silenced during a meeting are not replayed afterwards (DECISIONS 028).
+- Light/Dark/System appearance applies to the main panel and Settings together, immediately.
+- Clicking a Kıpır notification opens the main panel.
+- Language: new "System Default" option (follows macOS; unsupported languages use English), English declared as a bundle localization, corrected meeting copy (DECISIONS 029).
+- Localization checks now cover format arguments, runtime-built keys, unused keys and bundle localizations.
+
 ## Unreleased — 0.2 review fixes
 - Entering the working window starts a fresh interval; a Due episode from the previous workday no longer returns silently (DECISIONS 025).
 - A long screen lock or display sleep counts as being away even when the heartbeat is coalesced; work time is still never credited while locked or asleep.

@@ -166,16 +166,16 @@ final class ExerciseTests: XCTestCase {
         XCTAssertNil(e.exercises); XCTAssertEqual(e.today.breaks, 1)
         c.step(e); XCTAssertEqual(e.today.breaks, 1)
     }
-    func testExerciseMeetingFreezesAndNavigationRestartsSelection() {
+    func testExerciseKeepsPlayingDuringMeetingAndNavigationRestartsSelection() {
         let c = Clock(); let e = c.engine(); e.perform(.startBreak)
         c.step(e, seconds: 8)
         let remaining = e.remaining
-        let elapsed = e.exercises?.elapsed
         e.perform(.toggleMeeting); c.step(e, seconds: 20)
-        XCTAssertEqual(e.remaining, remaining)
-        XCTAssertEqual(e.exercises?.elapsed, elapsed)
-        e.perform(.toggleMeeting); c.step(e, seconds: 2)
-        XCTAssertEqual(e.exercises?.elapsed, 10)
+        // Meeting mode silences interruptions only; the guided break keeps running and stays visible.
+        XCTAssertEqual(e.status, .onBreak)
+        XCTAssertEqual(e.remaining, remaining - 20)
+        XCTAssertEqual(e.exercises?.elapsed, 28)
+        e.perform(.toggleMeeting)
         e.navigateExercise(1)
         XCTAssertEqual(e.exercises?.current.id, .chest)
         XCTAssertEqual(e.exercises?.elapsed, 0)

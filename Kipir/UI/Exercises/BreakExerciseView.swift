@@ -35,7 +35,7 @@ struct BreakExerciseView: View {
                     Button(L("break.end")) { controller.perform(.skip) }
                 }
                 Text(L("exercise.safety")).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
-            }.preferredColorScheme(controller.colorScheme)
+            }
         }
     }
 }

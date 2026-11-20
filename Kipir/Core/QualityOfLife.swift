@@ -6,7 +6,9 @@ struct MenuBarStatusFormatter {
     /// Icon-only menu bar presentation (`Settings.menuBarStyle == "icon"`). Status is then carried by the symbol,
     /// the tooltip and the accessibility label only.
     var iconOnly = false
-    var showsText: Bool { !iconOnly && textKey != nil }
+    /// A Due episode exists even though another state (meeting, pause, off hours) is shown: say "Break", not "0 min".
+    var breakDue = false
+    var showsText: Bool { !iconOnly }
     /// Full status and remaining time for tooltips and VoiceOver; independent of the visible style.
     func summary(_ localize: (String) -> String) -> String {
         localize("app.name") + ", " + localize("status." + status.rawValue)
@@ -21,19 +23,71 @@ struct MenuBarStatusFormatter {
         case .suspended: return "powersleep"
         case .offHours: return "moon.zzz"
         case .due: return "figure.walk.circle.fill"
-        default: return "figure.walk"
+        case .onBreak: return "figure.walk.motion"
+        case .working: return "figure.walk"
         }
     }
-    var textKey: String? {
-        switch status {
-        case .working, .idle: return "menubar.minutes"
-        case .due: return "menubar.due"
-        case .onBreak: return "menubar.break"
-        case .meeting: return "menubar.meeting"
-        case .suspended: return "menubar.suspended"
-        case .offHours: return "menubar.offHours"
-        case .paused: return nil
+    /// The visible text is always the remaining minutes, except "Break" once a break is due. State is carried
+    /// by the icon in its fixed slot, so a pause, meeting or break never changes the label's width
+    /// (pre-release Fix 2). The full status stays in `summary`.
+    private var showsDue: Bool { status == .due || (breakDue && status != .onBreak) }
+    var textKey: String { showsDue ? "menubar.due" : "menubar.minutes" }
+    func text(_ localize: (String) -> String) -> String {
+        showsDue ? localize(textKey) : String(format: localize(textKey), minutes)
+    }
+}
+
+/// Trim end of the popover countdown ring: the remaining share clamped to 0...1 (non-finite input draws nothing).
+enum CountdownRingMath {
+    static func clamped(_ value: Double) -> Double { value.isFinite ? min(1, max(0, value)) : 0 }
+}
+
+/// Fixed geometry of the menu bar label. The text slot is measured once over every string the label can show
+/// in every supported language, so state, countdown and language changes never resize the status item.
+enum MenuBarLabelLayout {
+    static let iconSlot: Double = 18
+    static let gap: Double = 4
+    /// Work can be up to 240 minutes, snooze 60, breaks 60: three digits cover every countdown.
+    static let widestMinutes = 888
+
+    /// Every text the timer-style label can display, for the given localization tables (key -> format).
+    static func candidates(tables: [[String: String]]) -> [String] {
+        tables.flatMap { table -> [String] in
+            var values: [String] = []
+            if let format = table["menubar.minutes"] {
+                values += [8, 88, widestMinutes].map { String(format: format, $0) }
+            }
+            if let due = table["menubar.due"] { values.append(due) }
+            return values
         }
+    }
+    /// Width of the text slot in points, rounded up so nothing is clipped.
+    static func textSlotWidth(candidates: [String], measure: (String) -> Double) -> Double {
+        let widest = candidates.map(measure).filter { $0.isFinite && $0 >= 0 }.max() ?? 0
+        return (widest + 1).rounded(.up)
+    }
+    static func totalWidth(textSlot: Double, iconOnly: Bool) -> Double {
+        iconOnly ? iconSlot : iconSlot + gap + textSlot
+    }
+}
+
+/// Interface language. `nil`/"system" follows the macOS preferred languages (including the per-app language
+/// set in System Settings); an explicit "tr" or "en" overrides it. Unsupported system languages use English.
+enum AppLanguage {
+    static let supported = ["tr", "en"]
+    static let fallback = "en"
+    static func normalizedPreference(_ stored: String?) -> String {
+        guard let stored, supported.contains(stored) else { return "system" }
+        return stored
+    }
+    static func resolve(preference: String?, preferredLanguages: [String]) -> String {
+        let value = normalizedPreference(preference)
+        if value != "system" { return value }
+        for identifier in preferredLanguages {
+            let code = identifier.lowercased().split(whereSeparator: { $0 == "-" || $0 == "_" }).first.map(String.init)
+            if let code, supported.contains(code) { return code }
+        }
+        return fallback
     }
 }
 
@@ -61,6 +115,13 @@ struct NotificationCapabilities {
     }
 }
 extension NotificationPolicy {
+    /// Meeting mode consumes the current Due episode's reminder instead of postponing it: the returned value is
+    /// stored as the last attempted reminder, so ending the meeting never replays it. Later episodes get new
+    /// identifiers and notify normally (DECISIONS 028).
+    static func markingMeetingSuppressed(sent: UUID?, meeting: Bool, dueID: UUID?) -> UUID? {
+        guard meeting, let dueID else { return sent }
+        return dueID
+    }
     static func testBlock(enabled: Bool, permission: NotificationPermission) -> String? {
         if !enabled { return "notification.test.disabled" }
         switch permission {
@@ -95,9 +156,9 @@ enum BreakCompletionFeedback {
     /// One consumption of the scheduler's completion event, shared by the sound and the on-screen notice.
     /// The natural-break event is deliberately not consumed here; the controller reads it separately.
     struct Outcome: Equatable {
-        /// A scheduler-credited completion occurred (never true for skip, manual finish, pause, meeting or sleep).
+        /// A scheduler-credited completion occurred (never true for skip, manual finish, pause or sleep).
         var completed = false
-        /// Preference was true when the break completed and is still true now.
+        /// Preference was true when the break completed and is still true now, and meeting mode is off.
         var playSound = false
     }
 
@@ -106,7 +167,8 @@ enum BreakCompletionFeedback {
         var outcome = Outcome()
         if let captured = engine.consumeBreakCompletion() {
             outcome.completed = true
-            outcome.playSound = captured && engine.settings.breakEndSound
+            // Meeting mode silences the sound; the event is still consumed so it never plays later.
+            outcome.playSound = captured && engine.settings.breakEndSound && !engine.meeting
         }
         return outcome
     }

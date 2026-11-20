@@ -18,6 +18,8 @@ final class AppController: ObservableObject {
     @Published private(set) var loginMessage: String?
     /// Transient line under the timer (completed break / natural break); expires from the heartbeat.
     @Published private(set) var notice: TransientNotice?
+    /// Set by the app delegate; a notification click asks the status bar to show the main popover.
+    var onOpenRequest: (() -> Void)?
     /// Stored in UserDefaults; the setter publishes explicitly because `@AppStorage` inside an
     /// `ObservableObject` does not.
     var onboarded: Bool {
@@ -25,12 +27,16 @@ final class AppController: ObservableObject {
         set { objectWillChange.send(); UserDefaults.standard.set(newValue, forKey: "onboarded") }
     }
 
-    var language: String {
-        UserDefaults.standard.string(forKey: "language") == "en" ? "en" : "tr"
+    /// Stored choice: "system", "tr" or "en". A missing key means "system" (DECISIONS 029).
+    var languagePreference: String {
+        AppLanguage.normalizedPreference(UserDefaults.standard.string(forKey: "language"))
     }
+    /// Language actually shown ("tr" or "en").
+    var language: String { currentLanguage() }
     func setLanguage(_ value: String) {
-        guard ["tr", "en"].contains(value), value != language else { return }
-        UserDefaults.standard.set(value, forKey: "language")
+        guard value == "system" || AppLanguage.supported.contains(value), value != languagePreference else { return }
+        if value == "system" { UserDefaults.standard.removeObject(forKey: "language") }
+        else { UserDefaults.standard.set(value, forKey: "language") }
         notifications.updateLanguage()
         if loginMessage != nil {
             loginMessage = L(SMAppService.mainApp.status == .requiresApproval ? "login.approval" : "login.error")
@@ -53,6 +59,7 @@ final class AppController: ObservableObject {
             self.perform(action)
         }
         notifications.onChange = { [weak self] in self?.revision &+= 1 }
+        notifications.onOpen = { [weak self] in self?.onOpenRequest?() }
         refreshLogin()
         let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
@@ -129,13 +136,20 @@ final class AppController: ObservableObject {
         } catch { loginMessage = L("login.error") }
         refreshLogin()
     }
-    var colorScheme: ColorScheme? {
-        settings.appearance == "light" ? .light : settings.appearance == "dark" ? .dark : nil
-    }
 }
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private(set) var statusBar: StatusBarController?
+    /// Runs before launch completes so the notification delegate exists when a click launches the app; an open
+    /// request that arrives before the status item is installed is queued by `StatusBarController`.
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        let controller = AppController.shared
+        let statusBar = StatusBarController(controller: controller)
+        controller.onOpenRequest = { [weak statusBar] in statusBar?.requestOpen() }
+        self.statusBar = statusBar
+    }
+    func applicationDidFinishLaunching(_ notification: Notification) { statusBar?.install() }
     func applicationWillTerminate(_ notification: Notification) { AppController.shared.save() }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 }

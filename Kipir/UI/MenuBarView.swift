@@ -8,6 +8,7 @@ enum Space {
 
 struct MenuBarView: View {
     @ObservedObject var controller: AppController
+    let openSettings: () -> Void
     @State private var confirmReset = false
     private var engine: BreakScheduler { controller.engine }
     var body: some View {
@@ -29,9 +30,7 @@ struct MenuBarView: View {
                 BreakExerciseView(controller: controller)
             } else {
                 ZStack {
-                    Circle().stroke(.teal.opacity(0.12), lineWidth: 8)
-                    Circle().trim(from: 0, to: engine.progress)
-                        .stroke(.teal, style: StrokeStyle(lineWidth: 8, lineCap: .round)).rotationEffect(.degrees(-90))
+                    CountdownRing(fraction: engine.remainingFraction)
                     VStack(spacing: Space.xs) {
                         Text(durationText(engine.remaining)).font(.system(size: 38, weight: .medium, design: .rounded)).monospacedDigit()
                         Text(L("timer.untilBreak")).font(.caption).foregroundStyle(.secondary)
@@ -50,16 +49,17 @@ struct MenuBarView: View {
                     Button { controller.perform(.togglePause) } label: {
                         Label(L(engine.paused ? "resume" : "pause"), systemImage: engine.paused ? "play.fill" : "pause.fill")
                     }
-                    // The break action is the single prominent control, and only when a break is due.
-                    if engine.status == .due {
+                    // The break action is the single prominent control, and only when a break is due
+                    // (also during a meeting, which only silences the reminder).
+                    if engine.breakDueActionable {
                         Button(L("break.start")) { controller.perform(.startBreak) }
                             .buttonStyle(.borderedProminent).tint(.teal)
                     } else {
                         Button(L("break.start")) { controller.perform(.startBreak) }
-                            .disabled(engine.paused || engine.meeting || engine.suspended)
+                            .disabled(engine.paused || engine.suspended)
                     }
                 }.controlSize(.large)
-                if engine.status == .due {
+                if engine.breakDueActionable {
                     HStack(spacing: Space.s) {
                         Button(L("snooze")) { controller.perform(.snooze) }
                         Button(L("skip")) { controller.perform(.skip) }
@@ -102,8 +102,8 @@ struct MenuBarView: View {
             }
             Divider()
             HStack {
-                SettingsLink { Label(L("settings"), systemImage: "gearshape") }
-                    .simultaneousGesture(TapGesture().onEnded { NSApp.activate(ignoringOtherApps: true) })
+                Button(action: openSettings) { Label(L("settings"), systemImage: "gearshape") }
+                    .buttonStyle(.borderless)
                 Spacer()
                 Menu {
                     Button(L("session.reset")) { confirmReset = true }

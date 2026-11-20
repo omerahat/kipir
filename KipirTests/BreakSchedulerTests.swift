@@ -75,13 +75,18 @@ final class BreakSchedulerTests: XCTestCase {
         c.step(e, seconds: 60); XCTAssertEqual(e.status, .due)
         XCTAssertNotEqual(old, e.reminderID)
     }
-    func testPauseAndMeetingPreserveStateWithoutStatistics() {
+    func testPauseFreezesButMeetingKeepsCounting() {
         let c = Clock(); let e = c.engine(); c.step(e, seconds: 20)
         e.perform(.togglePause); c.step(e, seconds: 100)
         XCTAssertEqual(e.status, .paused); XCTAssertEqual(e.activeWork, 20)
-        e.perform(.toggleMeeting); e.perform(.togglePause)
-        c.step(e, seconds: 100); XCTAssertEqual(e.status, .meeting)
-        e.perform(.toggleMeeting); c.step(e); XCTAssertEqual(e.activeWork, 21)
+        // Paused + meeting stays frozen: meeting mode never resumes a manual pause.
+        e.perform(.toggleMeeting); c.step(e, seconds: 10)
+        XCTAssertEqual(e.status, .paused); XCTAssertEqual(e.activeWork, 20)
+        // Resume while in a meeting: work, statistics and the countdown run normally (pre-release Fix 3).
+        e.perform(.togglePause); c.step(e, seconds: 100)
+        XCTAssertEqual(e.status, .meeting); XCTAssertEqual(e.activeWork, 120); XCTAssertEqual(e.today.activeSeconds, 120)
+        XCTAssertEqual(e.remaining, 2700 - 120)
+        e.perform(.toggleMeeting); c.step(e); XCTAssertEqual(e.activeWork, 121)
     }
     func testBreakFreezesDuringPauseAndSleep() {
         let c = Clock(); let e = c.engine(); e.perform(.startBreak)
@@ -234,12 +239,19 @@ final class BreakSchedulerTests: XCTestCase {
         XCTAssertEqual(label(.working, .infinity).minutes, 0)
         XCTAssertEqual(label(.working, -1).minutes, 0)
         XCTAssertEqual(label(.due, 0).textKey, "menubar.due")
-        XCTAssertEqual(label(.onBreak, 61).textKey, "menubar.break")
-        XCTAssertEqual(label(.paused, 61).textKey, nil)
+        // Every other state keeps the minute countdown; only the icon in its fixed slot changes (Fix 2).
+        for status in [WorkStatus.working, .idle, .paused, .meeting, .onBreak, .suspended, .offHours] {
+            XCTAssertEqual(label(status, 61).textKey, "menubar.minutes", "\(status)")
+            XCTAssertTrue(label(status, 61).showsText, "\(status)")
+        }
+        XCTAssertEqual(label(.onBreak, 61).symbol, "figure.walk.motion")
         XCTAssertEqual(label(.paused, 61).symbol, "pause.fill")
         XCTAssertEqual(label(.idle, 61).symbol, "moon")
-        XCTAssertEqual(label(.meeting, 61).textKey, "menubar.meeting")
+        XCTAssertEqual(label(.meeting, 61).symbol, "person.2")
         XCTAssertEqual(label(.suspended, 61).symbol, "powersleep")
+        let table = ["menubar.minutes": "%d min", "menubar.due": "Break"]
+        XCTAssertEqual(label(.paused, 61).text { table[$0] ?? $0 }, "2 min")
+        XCTAssertEqual(label(.due, 0).text { table[$0] ?? $0 }, "Break")
     }
 
     func testNotificationTestRequiresExplicitAuthorizationAndEnabledSetting() {
@@ -275,16 +287,16 @@ final class BreakSchedulerTests: XCTestCase {
         XCTAssertEqual(e.checkpoint.completedShorts, 1)
     }
 
-    func testTimedMeetingStartsFreezesAndExpiresAtDeadline() {
+    func testTimedMeetingKeepsCountingAndExpiresAtDeadline() {
         let c = Clock(); let e = c.engine(); c.step(e, seconds: 20)
         let start = c.date; e.setMeeting(true, duration: 900)
         XCTAssertEqual(e.checkpoint.meetingDeadline, start + 900)
         XCTAssertEqual(e.status, .meeting)
         c.step(e, seconds: 899)
-        XCTAssertTrue(e.meeting); XCTAssertEqual(e.activeWork, 20)
+        XCTAssertTrue(e.meeting); XCTAssertEqual(e.activeWork, 919)
         c.step(e); XCTAssertFalse(e.meeting); XCTAssertNil(e.checkpoint.meetingDeadline)
-        XCTAssertEqual(e.activeWork, 20); XCTAssertEqual(e.today.activeSeconds, 20)
-        c.step(e); XCTAssertEqual(e.activeWork, 21)
+        XCTAssertEqual(e.activeWork, 920); XCTAssertEqual(e.today.activeSeconds, 920)
+        c.step(e); XCTAssertEqual(e.activeWork, 921)
     }
     func testMeetingEarlyEndIndefiniteAndReplacementAreExplicit() {
         let c = Clock(); let e = c.engine()
@@ -299,7 +311,9 @@ final class BreakSchedulerTests: XCTestCase {
         e.setMeeting(true, duration: 3601); XCTAssertFalse(e.meeting)
     }
     func testMeetingExpiresOnWakeWithoutSleepCredit() {
-        let c = Clock(); let e = c.engine(); c.step(e, seconds: 20)
+        // Natural break off: this isolates sleep crediting (a 2400 s sleep is otherwise a natural break).
+        var s = Settings(); s.naturalBreak = 0
+        let c = Clock(); let e = c.engine(s); c.step(e, seconds: 20)
         e.setMeeting(true, duration: 1800); e.setSuspended(true)
         c.time += 2400; c.date += 2400; c.idle = 2400
         e.setSuspended(false)
@@ -330,16 +344,49 @@ final class BreakSchedulerTests: XCTestCase {
         XCTAssertFalse(e.meeting); XCTAssertNil(e.checkpoint.meetingDeadline)
         XCTAssertEqual(e.today.breaks, 0)
     }
-    func testMeetingSuppressesDueAndRestoresSameReminderAfterExpiration() {
-        let c = Clock(); var s = Settings(); s.work = 60
+    func testMeetingConsumesDueReminderWithoutReplayAndLaterEpisodesNotify() {
+        let c = Clock(); var s = Settings(); s.work = 60; s.naturalBreak = 0
         let e = c.engine(s); c.step(e, seconds: 60); let id = e.reminderID
         e.setMeeting(true, duration: 900); c.step(e, seconds: 899, input: false)
-        XCTAssertNil(e.reminderID); XCTAssertEqual(e.checkpoint.dueID, id)
+        XCTAssertNil(e.reminderID); XCTAssertEqual(e.checkpoint.dueID, id); XCTAssertTrue(e.breakDueActionable)
         XCTAssertFalse(NotificationPolicy.shouldDeliver(enabled: true, authorized: true, due: e.reminderID, sent: nil))
+        // The manager stores the marked episode as already attempted while the meeting runs.
+        let sent = NotificationPolicy.markingMeetingSuppressed(sent: nil, meeting: e.meeting, dueID: e.checkpoint.dueID)
+        XCTAssertEqual(sent, id)
         c.step(e, input: false)
-        XCTAssertEqual(e.reminderID, id); XCTAssertEqual(e.activeWork, 60)
-        XCTAssertFalse(NotificationPolicy.shouldDeliver(enabled: true, authorized: true, due: e.reminderID, sent: id))
-        XCTAssertTrue(NotificationPolicy.shouldDeliver(enabled: true, authorized: true, due: e.reminderID, sent: nil))
+        XCTAssertFalse(e.meeting); XCTAssertEqual(e.reminderID, id); XCTAssertEqual(e.activeWork, 60)
+        XCTAssertEqual(NotificationPolicy.markingMeetingSuppressed(sent: sent, meeting: false, dueID: id), sent)
+        XCTAssertFalse(NotificationPolicy.shouldDeliver(enabled: true, authorized: true, due: e.reminderID, sent: sent))
+        // A later episode has a new identifier and notifies normally.
+        e.perform(.skip); c.step(e, seconds: 60)
+        XCTAssertNotNil(e.reminderID); XCTAssertNotEqual(e.reminderID, id)
+        XCTAssertTrue(NotificationPolicy.shouldDeliver(enabled: true, authorized: true, due: e.reminderID, sent: sent))
+    }
+    func testTimerReachesZeroDuringMeetingAndBreakRunsSilently() {
+        let c = Clock(); var s = Settings(); s.work = 60; s.shortBreak = 30; s.breakEndSound = true
+        let e = c.engine(s); c.step(e, seconds: 30)
+        e.setMeeting(true); c.step(e, seconds: 30)
+        // Normal completion logic: the interval becomes Due; only the reminder is withheld.
+        XCTAssertEqual(e.checkpoint.phase, .due); XCTAssertEqual(e.status, .meeting)
+        XCTAssertNil(e.reminderID); XCTAssertNotNil(e.checkpoint.dueID); XCTAssertTrue(e.breakDueActionable)
+        XCTAssertEqual(e.remaining, 0); XCTAssertEqual(e.remainingFraction, 0)
+        // Manual break and snooze stay available during a meeting.
+        e.perform(.startBreak); XCTAssertEqual(e.status, .onBreak); XCTAssertTrue(e.meeting)
+        c.step(e, seconds: 30, input: false)
+        let outcome = BreakCompletionFeedback.consume(from: e)
+        XCTAssertTrue(outcome.completed); XCTAssertFalse(outcome.playSound)
+        XCTAssertEqual(e.today.breaks, 1); XCTAssertEqual(e.checkpoint.phase, .working)
+        XCTAssertFalse(BreakCompletionFeedback.consume(from: e).completed, "consumed once, never replayed")
+        c.step(e, seconds: 60); e.perform(.snooze)
+        XCTAssertEqual(e.checkpoint.phase, .working); XCTAssertTrue(e.checkpoint.snoozed)
+    }
+    func testMeetingToggleKeepsUnconfirmedCreditAndRapidTogglesAreHarmless() {
+        let c = Clock(); let e = c.engine(); c.step(e, seconds: 10)
+        c.step(e, seconds: 30, input: false)            // 30 s without input awaits confirmation
+        for _ in 0..<5 { c.time += 0.2; c.date += 0.2; c.idle += 0.2; e.setMeeting(true); e.setMeeting(false) }
+        c.step(e)                                       // input confirms the pending span
+        XCTAssertEqual(e.activeWork, 42, accuracy: 0.001)
+        XCTAssertFalse(e.meeting); XCTAssertNil(e.checkpoint.meetingDeadline)
     }
     func testMeetingDiscardsUnconfirmedInputTail() {
         let c = Clock(); let e = c.engine(); c.step(e, seconds: 30, input: false)
@@ -363,14 +410,16 @@ final class BreakSchedulerTests: XCTestCase {
         let restored = c.engine(checkpoint: legacy)
         XCTAssertTrue(restored.meeting); XCTAssertNil(restored.checkpoint.meetingDeadline)
     }
-    func testWallClockAdjustmentAndUnknownGapNeverCreditMeetingInterval() {
+    func testWallClockAdjustmentNeverCreditsMoreThanMonotonicTime() {
         let c = Clock(); let e = c.engine(); c.step(e, seconds: 20)
         e.setMeeting(true, duration: 900)
         c.date += 901; c.time += 1; e.tick()
-        XCTAssertFalse(e.meeting); XCTAssertEqual(e.activeWork, 20)
+        // The wall-clock jump ends the timed meeting; only the one monotonic second is credited.
+        XCTAssertFalse(e.meeting); XCTAssertEqual(e.activeWork, 21)
         e.setMeeting(true, duration: 3600)
         c.date -= 3601; c.time += 1; e.tick()
-        XCTAssertFalse(e.meeting); XCTAssertEqual(e.activeWork, 20)
+        XCTAssertFalse(e.meeting); XCTAssertEqual(e.activeWork, 22)
+        c.time += 500; c.date += 500; e.tick(); XCTAssertEqual(e.activeWork, 22, "unknown gap is never credited")
     }
 
     func testNaturalCompletionSoundExactlyOnceForShortAndLongBreaks() {
@@ -396,8 +445,12 @@ final class BreakSchedulerTests: XCTestCase {
         e.perform(.startBreak); c.step(e, seconds: 9)
         e.perform(.togglePause); c.step(e, seconds: 30)
         BreakCompletionFeedback.consume(from: e) { sounds += 1 }
-        e.perform(.togglePause); e.setMeeting(true, duration: 900); c.step(e, seconds: 900)
-        BreakCompletionFeedback.consume(from: e) { sounds += 1 }
+        // Meeting mode: the break keeps counting and completes (credited) but silently.
+        e.perform(.togglePause); e.setMeeting(true, duration: 900); c.step(e)
+        let silent = BreakCompletionFeedback.consume(from: e) { sounds += 1 }
+        XCTAssertTrue(silent.completed); XCTAssertFalse(silent.playSound); XCTAssertEqual(e.today.breaks, 1)
+        e.setMeeting(false)
+        e.perform(.startBreak); c.step(e, seconds: 9)
         e.setSuspended(true); c.time += 600; c.date += 600; e.setSuspended(false)
         BreakCompletionFeedback.consume(from: e) { sounds += 1 }
         XCTAssertEqual(sounds, 0); XCTAssertEqual(e.remaining, 1)
@@ -671,6 +724,32 @@ final class NotificationManagerTests: XCTestCase {
         delivery.onRemove = { cleaned.fulfill() }
         delivery.pendingAdd?.resume()
         await fulfillment(of: [cleaned], timeout: 2)
+        XCTAssertTrue(delivery.requests.isEmpty)
+    }
+
+    @MainActor func testMeetingSuppressesReminderAndNeverReplaysItAfterwards() async {
+        let suite = "KipirNotificationMeeting.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let delivery = RecordingNotificationDelivery()
+        let manager = NotificationManager(delivery: delivery, defaults: defaults)
+        await manager.refreshPermission()
+        let c = BreakSchedulerTests.Clock(); var s = Settings(); s.work = 60; s.naturalBreak = 0
+        let e = c.engine(s); c.step(e, seconds: 30)
+        e.setMeeting(true); c.step(e, seconds: 30); manager.sync(engine: e)
+        await Task.yield()
+        XCTAssertEqual(e.checkpoint.phase, .due); XCTAssertTrue(delivery.requests.isEmpty)
+        XCTAssertEqual(defaults.string(forKey: "lastNotificationAttempt"), e.checkpoint.dueID?.uuidString)
+        // Ending the meeting resumes normal behavior without replaying the silenced episode.
+        e.setMeeting(false); manager.sync(engine: e); c.step(e); manager.sync(engine: e)
+        await Task.yield()
+        XCTAssertNotNil(e.reminderID); XCTAssertTrue(delivery.requests.isEmpty)
+        // The next episode notifies normally, and a restarted manager still remembers the silenced one.
+        e.perform(.skip); c.step(e, seconds: 60); manager.sync(engine: e)
+        await Task.yield(); await Task.yield()
+        XCTAssertEqual(delivery.requests.map(\.identifier), [e.reminderID?.uuidString].compactMap { $0 })
+        // A reminder delivered before the meeting is withdrawn when the meeting starts.
+        e.setMeeting(true); manager.sync(engine: e)
         XCTAssertTrue(delivery.requests.isEmpty)
     }
 

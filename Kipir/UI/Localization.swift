@@ -1,7 +1,11 @@
 import Foundation
 
+/// Resolved interface language: the stored choice, or the macOS preferred languages for "System Default".
+func currentLanguage(defaults: UserDefaults = .standard) -> String {
+    AppLanguage.resolve(preference: defaults.string(forKey: "language"), preferredLanguages: Locale.preferredLanguages)
+}
 func L(_ key: String) -> String {
-    let language = UserDefaults.standard.string(forKey: "language") == "en" ? "en" : "tr"
+    let language = currentLanguage()
     let bundle = Bundle.main.path(forResource: language, ofType: "lproj").flatMap(Bundle.init(path:)) ?? .main
     return NSLocalizedString(key, bundle: bundle, comment: "")
 }
