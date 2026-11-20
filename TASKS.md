@@ -109,4 +109,6 @@ Automated evidence is in TESTING.md ("0.2 integration"); unchecked items need a 
 - [ ] Physical sleep/wake/lock and natural break in real use; working hours across a real DST change.
 - [ ] Human pose review of all 11 movements and native Turkish copy review.
 - [ ] Extended energy/resource use.
-- [ ] Developer ID signing, notarization and Gatekeeper assessment: BLOCKED, no identity on this Mac (maintainer action).
+- [x] Distribution decision: Homebrew with ad hoc signing (DECISIONS 027). Developer ID/notarization is not planned; `Scripts/release-developer-id.sh` stays as an optional future path.
+- [x] 0.2.0 packaged (`WRITE_CASK=1 bash Scripts/package-release.sh`), published as GitHub release v0.2.0, cask updated.
+- [ ] Install/upgrade 0.2.0 via `brew upgrade --cask omerahat/kipir/kipir` on a real Mac and run the TESTING.md manual checklist.
