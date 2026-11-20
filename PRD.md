@@ -37,5 +37,5 @@ Notification visibility acceptance: distinguish full desktop alert eligibility, 
 - Optional working hours (weekdays, start, end, overnight) suppress credit, Due transitions, natural-break accrual and reminders outside the window.
 - Menu bar style (timer or icon), per-state status notes, break-length presets with a non-destructive Custom row, and a transient completion/natural-break notice.
 - Notification state is shown as off, needs permission, denied, limited or active with a single primary action; first run is a two-step popover welcome.
-- Exercise guide: 11 movements in four body areas, deterministic rotation, optional body-area focus, flat vector key-pose artwork.
+- Exercise guide: 11 movements in four body areas, deterministic rotation, optional body-area focus, illustrated two-pose artwork.
 - Acceptance: automated results are in TESTING.md; device, visual, VoiceOver, notification-delivery, movement-review and Turkish-copy acceptance remain pending.

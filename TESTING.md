@@ -218,3 +218,12 @@ Nothing below is established by unit tests or the offscreen sheets.
 13. Window re-entry (DECISIONS 025): leave a Due episode before the working window ends, sleep or quit the Mac across the window end, reopen inside the next window and confirm the interval restarted. Known gap: a Mac that sleeps or an app that quits inside the window and resumes inside a later window never observes "outside", so a stale episode can survive that case.
 
 Suggested spot checks: set natural break to 5 minutes, leave the Mac untouched and confirm the work interval restarts (with an AFK threshold above 4 minutes the effective threshold is AFK + 60 s instead); set a working-hours window a few minutes ahead and observe off-hours status, withdrawn reminder and resumption; set menu bar style to icon and read the tooltip; pick a non-preset break length (only possible from older data) and confirm the Custom row appears without rewriting it.
+
+## Illustrated exercise poses — 2026-11-20
+Replaced the Canvas figure with generated two-pose illustrations (DECISIONS 026).
+- `swift Scripts/PrepareExerciseImages.swift generated_images`: PASS, 11 movements → 22 PNGs (360 px @2x, ~1.7 MB) in `Assets.xcassets`.
+- `swift test`: **157/157 PASS** (adds `testPoseBlendHoldsEachPoseAndFadesBriefly`, `testEveryMovementHasBothPoseImagesInTheAssetCatalog`).
+- `xcodebuild … test`: **164/164 TEST SUCCEEDED**; images compiled into `Assets.car`.
+- `python3 Scripts/test-localization.py`: OK.
+- Contact sheet of all start/end pairs inspected (`docs/exercise-poses-review.png`, not committed): consistent character, no clipping except the chest-opening hands reaching the crop edge.
+- MANUAL REVIEW REQUIRED: live crossfade playback in the popover, dark-mode appearance of the white card, Reduce Motion pair, and human review of pose accuracy.

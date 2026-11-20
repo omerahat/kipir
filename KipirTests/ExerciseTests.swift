@@ -200,4 +200,26 @@ final class ExerciseTests: XCTestCase {
         XCTAssertEqual(e.today.breaks, 2); XCTAssertNil(e.exercises)
         c.step(e, seconds: 10, input: false); XCTAssertEqual(e.today.breaks, 2)
     }
+    func testPoseBlendHoldsEachPoseAndFadesBriefly() {
+        XCTAssertEqual(exercisePoseBlend(phase: 0), 0)
+        XCTAssertEqual(exercisePoseBlend(phase: 0.2), 0)
+        XCTAssertEqual(exercisePoseBlend(phase: 0.5), 1)
+        XCTAssertEqual(exercisePoseBlend(phase: 0.7), 1)
+        XCTAssertEqual(exercisePoseBlend(phase: 0.44), 0.5, accuracy: 0.01)
+        XCTAssertEqual(exercisePoseBlend(phase: 0.94), 0.5, accuracy: 0.01)
+        XCTAssertEqual(exercisePoseBlend(phase: 3.2), exercisePoseBlend(phase: 0.2), accuracy: 1e-9)
+        XCTAssertEqual(exercisePoseBlend(phase: .nan), 0)
+        XCTAssertEqual(exercisePoseBlend(phase: -0.3), exercisePoseBlend(phase: 0.7), accuracy: 1e-9)
+    }
+    func testEveryMovementHasBothPoseImagesInTheAssetCatalog() throws {
+        let catalog = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Kipir/Resources/Assets.xcassets")
+        for movement in ExerciseDefinition.Movement.allCases {
+            for pose in ["start", "end"] {
+                let name = "exercise-\(movement.rawValue)-\(pose)"
+                let png = catalog.appendingPathComponent("\(name).imageset/\(name).png")
+                XCTAssertTrue(FileManager.default.fileExists(atPath: png.path), name)
+            }
+        }
+    }
 }

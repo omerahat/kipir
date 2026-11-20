@@ -166,3 +166,17 @@ struct ExerciseVisualClock {
         running = value
     }
 }
+
+/// Weight of the end pose (0 = start pose, 1 = end pose) at a loop position. Each pose is held for
+/// most of its half of the loop, with a short eased crossfade so the figure never looks doubled
+/// for long. `phase` is measured in loops; non-finite input shows the start pose.
+func exercisePoseBlend(phase: Double, fade: Double = 0.12) -> Double {
+    guard phase.isFinite else { return 0 }
+    let f = phase - phase.rounded(.down)
+    let fade = min(max(fade, 0.001), 0.5)
+    func ease(_ x: Double) -> Double { let t = min(max(x, 0), 1); return t * t * (3 - 2 * t) }
+    if f < 0.5 - fade { return 0 }
+    if f < 0.5 { return ease((f - (0.5 - fade)) / fade) }
+    if f < 1 - fade { return 1 }
+    return 1 - ease((f - (1 - fade)) / fade)
+}
