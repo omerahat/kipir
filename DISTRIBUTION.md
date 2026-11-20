@@ -16,8 +16,8 @@ Apple hesabı veya yeni bağımlılık gerekmez. Derleme günlüğü:
 
 Çıktılar:
 
-- `dist/Kipir-0.1.1.zip`: doğrudan Kipir.app içeren kurulum arşivi.
-- `dist/Kipir-0.1.1.zip.sha256`: arşivin SHA-256 özeti.
+- `dist/Kipir-<sürüm>.zip`: doğrudan Kipir.app içeren kurulum arşivi.
+- `dist/Kipir-<sürüm>.zip.sha256`: arşivin SHA-256 özeti.
 - `dist/kipir.rb`: aynı sürüm, indirme adresi ve gerçek SHA-256 ile üretilen cask.
   İzlenen `Casks/kipir.rb` dosyası varsayılan olarak **değiştirilmez**; henüz
   yayımlanmamış bir ZIP'in özetini kendiliğinden depoya yazmamak için bu bilinçli bir
@@ -38,9 +38,9 @@ paketleme çalışmasına ait olmalıdır; ZIP'i sonradan yeniden oluşturmayın
 2. Onaydan sonra ilgili kaynaklarla cask'i GitHub'daki `omerahat/kipir` deposunun
    varsayılan dalına gönderin. Deponun kullanıcılar tarafından erişilebilir olduğunu
    doğrulayın; özel depoda herkese açık kurulum mümkün değildir.
-3. Paketlenen kaynak commit'ine `v0.1.1` etiketiyle bir GitHub Release oluşturun.
-   `dist/Kipir-0.1.1.zip` ve `.zip.sha256` dosyalarını ekleyin. Cask adresi tam olarak:
-   `https://github.com/omerahat/kipir/releases/download/v0.1.1/Kipir-0.1.1.zip`.
+3. Paketlenen kaynak commit'ine `v<sürüm>` etiketiyle bir GitHub Release oluşturun.
+   `dist/Kipir-<sürüm>.zip` ve `.zip.sha256` dosyalarını ekleyin. Cask adresi tam olarak:
+   `https://github.com/omerahat/kipir/releases/download/v<sürüm>/Kipir-<sürüm>.zip`.
 4. İndirilen arşivin özetini cask ile karşılaştırın. Ayrı bir Mac'te README'deki
    kurulum komutlarını deneyin. Henüz yayımlanmamış indirme adresini çalışır gibi
    duyurmayın. Sonraki sürümlerde aynı adımları yeni sürüm numarasıyla tekrarlayın.
