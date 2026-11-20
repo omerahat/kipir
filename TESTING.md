@@ -241,3 +241,7 @@ Commands run from the repository root; derived data and logs are in the session 
 ## Popover layout stability (DECISIONS 031)
 - `swift test --disable-sandbox`: 166 XCTest cases, 0 failures (includes `testCountdownScreenNeverPutsStateNotesAboveTheRing`). `python3 scripts/test-localization.py`: OK. Debug `xcodebuild ... build`: BUILD SUCCEEDED. Xcode `test` not re-run.
 - NOT TESTED: on-screen geometry and real pointer clicks (Pause then Resume at the same coordinate, meeting on/off, TR/EN, Light/Dark, small displays). No pixel measurement was done; the claim rests on layout reasoning plus the unit test.
+
+## Ring smoothing (DECISIONS 032)
+- `swift test`: 166 passed. Xcode `test` (ad-hoc signed): 178 executed, 0 failures, TEST SUCCEEDED. Debug build succeeded.
+- NOT TESTED: the on-screen smoothness itself (animation is not covered by the pixel tests); needs a human look, including Reduce Motion.
