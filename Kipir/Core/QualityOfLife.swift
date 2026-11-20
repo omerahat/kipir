@@ -37,6 +37,17 @@ struct MenuBarStatusFormatter {
     }
 }
 
+/// Which one-line state explanation the popover shows. The countdown screen shows it below the primary controls
+/// (never above the ring, so state changes cannot move the ring or Pause/Resume); a pause needs none (badge and Resume
+/// button say it) and meeting's text lives in the meeting section below its toggle, so no toggle can shift. The break screen is unchanged: every non-working state keeps its line.
+enum PopoverStatusNote {
+    static func key(for status: WorkStatus, onBreakScreen: Bool) -> String? {
+        if status == .working { return nil }
+        if onBreakScreen { return "ui.status.note." + status.rawValue }
+        return status == .paused || status == .onBreak || status == .meeting ? nil : "ui.status.note." + status.rawValue
+    }
+}
+
 /// Trim end of the popover countdown ring: the remaining share clamped to 0...1 (non-finite input draws nothing).
 enum CountdownRingMath {
     static func clamped(_ value: Double) -> Double { value.isFinite ? min(1, max(0, value)) : 0 }

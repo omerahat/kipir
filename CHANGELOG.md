@@ -7,6 +7,7 @@
 - Light/Dark/System appearance applies to the main panel and Settings together, immediately.
 - Clicking a Kıpır notification opens the main panel.
 - Language: new "System Default" option (follows macOS; unsupported languages use English), English declared as a bundle localization, corrected meeting copy (DECISIONS 029).
+- The work-countdown popover no longer shifts vertically on pause, resume or meeting toggles: the state note moved from above the ring to below the controls (none for pause), and Pause/Resume/break buttons share the row equally so their frame and hit area never change with the label (DECISIONS 031).
 - Localization checks now cover format arguments, runtime-built keys, unused keys and bundle localizations.
 
 ## Unreleased — 0.2 review fixes
