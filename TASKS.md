@@ -125,3 +125,9 @@ Automated evidence is in TESTING.md ("0.2 integration"); unchecked items need a 
 - [ ] Independent Codex review of the stabilization diff (docs/pre-release/06).
 - [ ] Native Turkish review of the changed strings (`ui.status.note.meeting`, `settings.accounting`, `language.system`).
 
+
+## Animation polish (planned, not started)
+- [ ] Define which transitions get motion (state badge change, ring progress, Pause/Resume icon swap, meeting section expand/collapse, notice row, exercise pose changes) and which stay instant.
+- [ ] Motion must not move the ring, the Pause/Resume row or the meeting toggle (DECISIONS 031); expanding content animates downward only.
+- [ ] Honor Reduce Motion (no animation, same final layout); keep `TimelineView` rendering-only and add no second countdown timer.
+- [ ] Verify on device in Light/Dark and Turkish/English, then record evidence in TESTING.md.
