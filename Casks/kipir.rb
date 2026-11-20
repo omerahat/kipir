@@ -1,6 +1,6 @@
 cask "kipir" do
-  version "0.2.0"
-  sha256 "5ed71eeacebbde47f5d3e82e9dfe1ec667be5680f80326065140bd98efe00478"
+  version "0.2.1"
+  sha256 "f1e1c366611cf357281b3d41111c8de95608563070a1350887a0002567230338"
 
   url "https://github.com/omerahat/kipir/releases/download/v#{version}/Kipir-#{version}.zip"
   name "Kıpır"
