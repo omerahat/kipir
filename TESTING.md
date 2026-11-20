@@ -237,3 +237,7 @@ Commands run from the repository root; derived data and logs are in the session 
 - Scripted clicking was abandoned: it triggered a screen-recording permission prompt on the owner's desktop, and AX-press opening closed the popover almost immediately. The cause is unknown. If activation is being refused, a notification click while Kıpır is inactive could look dead, so check that first with a real click.
 - MANUAL REVIEW REQUIRED: everything marked NOT TESTED/BLOCKED in `docs/pre-release/03-test-matrix.md`, in particular the popover position during pause/meeting/break transitions, Light/Dark on both surfaces, real notification click (closed, open, cold launch, Settings open), the bilingual walkthrough, and keyboard shortcuts in the break guide.
 
+
+## Popover layout stability (DECISIONS 031)
+- `swift test --disable-sandbox`: 166 XCTest cases, 0 failures (includes `testCountdownScreenNeverPutsStateNotesAboveTheRing`). `python3 scripts/test-localization.py`: OK. Debug `xcodebuild ... build`: BUILD SUCCEEDED. Xcode `test` not re-run.
+- NOT TESTED: on-screen geometry and real pointer clicks (Pause then Resume at the same coordinate, meeting on/off, TR/EN, Light/Dark, small displays). No pixel measurement was done; the claim rests on layout reasoning plus the unit test.

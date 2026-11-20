@@ -120,6 +120,7 @@ Automated evidence is in TESTING.md ("0.2 integration"); unchecked items need a 
 - [x] One appearance source for popover and Settings.
 - [x] Notification body click opens the main panel (routing tested; open queued before launch completes).
 - [x] Language System Default, English bundle localization, extended localization checks (DECISIONS 029).
+- [x] Popover layout stability: state notes below controls, equal-width action buttons (DECISIONS 031); on-device pointer check still pending below.
 - [ ] On-device verification: popover position during state changes, Light/Dark on both surfaces, real notification click, bilingual walkthrough, restart, keyboard/VoiceOver (docs/pre-release/03).
 - [ ] Independent Codex review of the stabilization diff (docs/pre-release/06).
 - [ ] Native Turkish review of the changed strings (`ui.status.note.meeting`, `settings.accounting`, `language.system`).

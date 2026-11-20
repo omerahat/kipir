@@ -22,11 +22,9 @@ struct MenuBarView: View {
                     .background(.teal.opacity(0.12), in: Capsule())
             }
             if !controller.onboarded { OnboardingView(controller: controller) }
-            if let note = statusNote {
-                Text(note).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity).fixedSize(horizontal: false, vertical: true)
-            }
             if engine.checkpoint.phase == .onBreak {
+                // The exercise screen keeps its own layout; its single state line stays where it always was.
+                if let key = PopoverStatusNote.key(for: engine.status, onBreakScreen: true) { statusNoteView(key) }
                 BreakExerciseView(controller: controller)
             } else {
                 ZStack {
@@ -46,16 +44,19 @@ struct MenuBarView: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 HStack(spacing: Space.s) {
+                    // Both buttons share the row equally, so Pause/Resume (and the break button) keep the same frame,
+                    // centre and hit area whatever their localized label says.
                     Button { controller.perform(.togglePause) } label: {
                         Label(L(engine.paused ? "resume" : "pause"), systemImage: engine.paused ? "play.fill" : "pause.fill")
+                            .frame(maxWidth: .infinity)
                     }
                     // The break action is the single prominent control, and only when a break is due
                     // (also during a meeting, which only silences the reminder).
                     if engine.breakDueActionable {
-                        Button(L("break.start")) { controller.perform(.startBreak) }
+                        Button { controller.perform(.startBreak) } label: { Text(L("break.start")).frame(maxWidth: .infinity) }
                             .buttonStyle(.borderedProminent).tint(.teal)
                     } else {
-                        Button(L("break.start")) { controller.perform(.startBreak) }
+                        Button { controller.perform(.startBreak) } label: { Text(L("break.start")).frame(maxWidth: .infinity) }
                             .disabled(engine.paused || engine.suspended)
                     }
                 }.controlSize(.large)
@@ -66,6 +67,9 @@ struct MenuBarView: View {
                     }
                 }
                 if let notice = controller.notice { noticeView(notice) }
+                // State explanations never sit above the ring or the Pause/Resume row. Pause, plain work and meeting
+                // need none here (badge, button, and the meeting section below the toggle say it).
+                if let key = PopoverStatusNote.key(for: engine.status, onBreakScreen: false) { statusNoteView(key) }
                 HStack {
                     VStack(alignment: .leading, spacing: Space.xs) {
                         Text(L("today.title")).font(.caption).foregroundStyle(.secondary)
@@ -92,6 +96,9 @@ struct MenuBarView: View {
                 .menuStyle(.borderlessButton).fixedSize().help(L("meeting.duration"))
             }
             if engine.meeting {
+                // Everything meeting-specific lives here, below the stable toggle row, so enabling it only grows the popover downward.
+                Text(L("ui.status.note.meeting")).font(.caption).foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading).fixedSize(horizontal: false, vertical: true)
                 HStack {
                     if let remaining = engine.meetingRemaining {
                         Text(String(format: L("meeting.remaining"), MenuBarStatusFormatter(status: .meeting, remaining: remaining).minutes))
@@ -119,9 +126,9 @@ struct MenuBarView: View {
         } message: { Text(L("session.resetMessage")) }
         .onAppear { controller.tick(); controller.refreshSystemSettings() }
     }
-    /// One short line explaining the current state; plain working needs none.
-    private var statusNote: String? {
-        engine.status == .working ? nil : L("ui.status.note." + engine.status.rawValue)
+    private func statusNoteView(_ key: String) -> some View {
+        Text(L(key)).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity).fixedSize(horizontal: false, vertical: true)
     }
     /// No transition or animation is attached, so Reduce Motion and default users see the same stable layout.
     private func noticeView(_ notice: TransientNotice) -> some View {

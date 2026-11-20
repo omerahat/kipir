@@ -175,6 +175,19 @@ final class PresentationTests: XCTestCase {
         XCTAssertEqual(MenuBarStatusFormatter(status: .working, remaining: .infinity).minutes, 0)
     }
 
+    // MARK: Popover layout stability
+
+    func testCountdownScreenNeverPutsStateNotesAboveTheRing() {
+        // Pause/resume and meeting toggles must not insert text above the ring; notes sit below the controls.
+        XCTAssertNil(PopoverStatusNote.key(for: .working, onBreakScreen: false))
+        XCTAssertNil(PopoverStatusNote.key(for: .paused, onBreakScreen: false))
+        XCTAssertNil(PopoverStatusNote.key(for: .meeting, onBreakScreen: false)) // shown in the meeting section instead
+        XCTAssertEqual(PopoverStatusNote.key(for: .due, onBreakScreen: false), "ui.status.note.due")
+        // The exercise screen keeps its previous per-state line.
+        XCTAssertNil(PopoverStatusNote.key(for: .working, onBreakScreen: true))
+        XCTAssertEqual(PopoverStatusNote.key(for: .paused, onBreakScreen: true), "ui.status.note.paused")
+    }
+
     // MARK: Countdown ring (pre-release Fix 1)
 
     func testRemainingFractionStartsFullAndDepletesExactlyToZero() {
