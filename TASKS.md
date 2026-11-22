@@ -101,7 +101,7 @@ Automated evidence is in TESTING.md ("0.2 integration"); unchecked items need a 
 - [x] Release preparation: `Scripts/release-developer-id.sh` and `WRITE_CASK` guard (DECISIONS 021); guard tests with stubbed tools.
 - [x] Automated verification: `swift test` 136/136, Xcode 143/143, localization and release-script checks (TESTING.md).
 - [x] Offscreen key-pose sheets rendered and inspected (illustration evidence only).
-- [ ] Final independent review (Agent A) recorded in docs/IMPLEMENTATION_PROGRESS.md.
+- [ ] Final independent review.
 - [ ] Live popover layout, light/dark and onboarding with the real permission prompt.
 - [ ] Menu bar label in both styles and its tooltip.
 - [ ] VoiceOver, keyboard and Reduce Motion in the running app.
@@ -121,8 +121,8 @@ Automated evidence is in TESTING.md ("0.2 integration"); unchecked items need a 
 - [x] Notification body click opens the main panel (routing tested; open queued before launch completes).
 - [x] Language System Default, English bundle localization, extended localization checks (DECISIONS 029).
 - [x] Popover layout stability: state notes below controls, equal-width action buttons (DECISIONS 031); on-device pointer check still pending below.
-- [ ] On-device verification: popover position during state changes, Light/Dark on both surfaces, real notification click, bilingual walkthrough, restart, keyboard/VoiceOver (docs/pre-release/03).
-- [ ] Independent Codex review of the stabilization diff (docs/pre-release/06).
+- [ ] On-device verification: popover position during state changes, Light/Dark on both surfaces, real notification click, bilingual walkthrough, restart, keyboard/VoiceOver.
+- [ ] Independent review of the stabilization diff.
 - [ ] Native Turkish review of the changed strings (`ui.status.note.meeting`, `settings.accounting`, `language.system`).
 
 

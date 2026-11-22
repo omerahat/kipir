@@ -7,3 +7,13 @@ xcuserdata/
 *.xcresult
 dist/
 .claude/worktrees/
+.swiftpm/
+
+# Internal working notes (kept locally, not published)
+.claude/
+docs/pre-release/
+docs/IMPLEMENTATION_PROGRESS.md
+docs/QOL_IMPLEMENTATION.md
+docs/PRODUCT_DISCOVERY.md
+docs/exercise-poses-review.png
+PRODUCT.md

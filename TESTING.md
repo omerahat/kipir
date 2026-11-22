@@ -235,7 +235,7 @@ Commands run from the repository root; derived data and logs are in the session 
 - Intermediate failures, all corrected: 9 existing tests asserted the old meeting freeze and were rewritten to DECISIONS 028. One new test forgot that a 900 s sleep is a natural break; natural break was disabled in that test.
 - Device evidence (partial): an isolated copy (`PRODUCT_BUNDLE_IDENTIFIER=com.omerahat.kipir.verify`; the installed app and its defaults were untouched, and the verify domain was deleted afterwards) launched. Its status item read `69×24` pt at the same x across Turkish → English → System → Turkish (72 pt at first launch, consistent with system spacing). The popover opened once at 330 pt.
 - Scripted clicking was abandoned: it triggered a screen-recording permission prompt on the owner's desktop, and AX-press opening closed the popover almost immediately. The cause is unknown. If activation is being refused, a notification click while Kıpır is inactive could look dead, so check that first with a real click.
-- MANUAL REVIEW REQUIRED: everything marked NOT TESTED/BLOCKED in `docs/pre-release/03-test-matrix.md`, in particular the popover position during pause/meeting/break transitions, Light/Dark on both surfaces, real notification click (closed, open, cold launch, Settings open), the bilingual walkthrough, and keyboard shortcuts in the break guide.
+- MANUAL REVIEW REQUIRED: on-device checks, the popover position during pause/meeting/break transitions, Light/Dark on both surfaces, real notification click (closed, open, cold launch, Settings open), the bilingual walkthrough, and keyboard shortcuts in the break guide.
 
 
 ## Popover layout stability (DECISIONS 031)
