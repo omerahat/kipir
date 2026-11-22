@@ -174,7 +174,7 @@ Build a release archive for Intel and Apple Silicon with `bash Scripts/package-r
 
 ## Contributing
 
-No contribution policy is published. If you work on the code, the conventions in [AGENTS.md](AGENTS.md) apply: no network, telemetry or third-party dependencies, localized Turkish and English strings for every visible message, and tests plus documentation updates (TASKS.md, DECISIONS.md, CHANGELOG.md, TESTING.md) for behavior changes. Product scope is described in [PRD.md](PRD.md).
+Contributions are welcome. **The exercise animations need help most:** each movement is currently two still poses with a crossfade. If you draw or animate, see [CONTRIBUTING.md](CONTRIBUTING.md) for how the artwork pipeline works, its known problems and its constraints. The same guide covers code changes: no network, telemetry or third-party dependencies, Turkish and English strings for every visible message, and tests for behavior changes.
 
 ## License
 
