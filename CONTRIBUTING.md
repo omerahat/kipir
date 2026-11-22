@@ -4,7 +4,7 @@ Thanks for your interest. Kıpır is a small, privacy-first macOS menu bar app, 
 
 ## Help wanted: exercise animations
 
-**The exercise animations are the area that needs the most help.** If you draw, animate or care about how movement looks on screen, this is the best place to start.
+**The exercise animations are the area that needs the most help.** If you draw, animate or care about how movement looks on screen, this is the best place to start. Discussion happens in [issue #1](https://github.com/omerahat/kipir/issues/1).
 
 ### How it works today
 
