@@ -14,6 +14,8 @@
 
 Kıpır is a private movement reminder that lives in the macOS menu bar. It tracks how long you have actually been working at your Mac and, when a break is due, guides you through a short illustrated stretch right in the menu bar panel.
 
+A **Chrome extension** version with the same timing rules, exercises and settings lives in [`extension/`](extension/). It is ready for the Chrome Web Store but not published yet, so for now you build it from source (see [Chrome extension](#chrome-extension)).
+
 It is built for developers and other people who sit for long stretches and forget to move. There are no accounts, no network access, no telemetry and no productivity scores. The interface is available in Turkish and English and follows your macOS language by default (English if your language is neither).
 
 > **Status:** Kıpır is a free preview. The release build is ad hoc signed and **not notarized by Apple**, so macOS may ask you to approve the first launch. See [Installation](#installation).
@@ -110,6 +112,18 @@ Pause can be applied in any state: it freezes the countdown and statistics and s
 - Meeting Mode only silences notifications and sounds; the timer, statistics and breaks keep running. Pause freezes the schedule and statistics.
 - Only a countdown that runs to zero counts as a completed break. Skipping or finishing early does not.
 
+## Chrome extension
+
+[`extension/`](extension/) contains Kıpır as a Manifest V3 Chrome extension for Chrome 127+ on macOS, Windows and Linux. It ports the same scheduler semantics to TypeScript and reads this app's Turkish/English strings and exercise illustrations at build time, so both versions share one copy of the text and art. The toolbar popup replaces the menu bar panel, a badge shows the remaining minutes, and Chrome notifications replace macOS notifications.
+
+```sh
+cd extension
+npm ci
+npm run build   # then chrome://extensions → Developer mode → Load unpacked → extension/dist
+```
+
+It only runs while Chrome is running, offers two notification buttons (Start break, Snooze) instead of four, and has no launch-at-login or quit option. [extension/README.md](extension/README.md) covers development and testing. [extension/docs/FEATURE_PARITY.md](extension/docs/FEATURE_PARITY.md) lists every difference from the macOS app, and [extension/docs/CHROME_WEB_STORE.md](extension/docs/CHROME_WEB_STORE.md) is the release checklist. It is not published in the Chrome Web Store yet.
+
 ## Privacy and permissions
 
 - **No network.** The app makes no network requests, and the sandbox entitlements file contains only `com.apple.security.app-sandbox`. There are no analytics, accounts, cloud sync or third-party dependencies.
@@ -137,6 +151,7 @@ See [SECURITY.md](SECURITY.md) for more detail, including how to report security
 | `KipirTests` | XCTest suite for the core, run through both Xcode and SwiftPM |
 | `Scripts` | Icon and asset generation, release packaging, Developer ID/notarization script, localization and script checks |
 | `Casks` | Homebrew cask |
+| `extension` | Chrome extension (TypeScript, React, Vite): its own engine port, tests and docs; reads `Kipir/Resources` at build time |
 
 The scheduler never imports AppKit or SwiftUI, owns no timers and requests no permissions. All time (monotonic clock, wall date and idle seconds) is injected, which keeps timing behavior deterministic in tests. For the details, see [ARCHITECTURE.md](ARCHITECTURE.md), [DESIGN.md](DESIGN.md) and [DECISIONS.md](DECISIONS.md).
 
@@ -162,6 +177,8 @@ xcodebuild -project Kipir.xcodeproj -scheme Kipir -configuration Debug -derivedD
 python3 Scripts/test-localization.py
 ```
 
+The Chrome extension has its own checks (`cd extension && npm run check`). Its build reads `Kipir/Resources`, so string or artwork changes here also reach the extension and are covered by its tests.
+
 Build a release archive for Intel and Apple Silicon with `bash Scripts/package-release.sh`. It writes a ZIP, a checksum and a cask to `dist/`. Publishing, signing identities and notarization are maintainer-only steps documented in [DISTRIBUTION.md](DISTRIBUTION.md), which is written in Turkish. [TESTING.md](TESTING.md) records test results and the device checks that are still pending.
 
 ## Limitations
@@ -174,7 +191,12 @@ Build a release archive for Intel and Apple Silicon with `bash Scripts/package-r
 
 ## Contributing
 
-Contributions are welcome. **The exercise animations need help most:** each movement is currently two still poses with a crossfade. If you draw or animate, see [CONTRIBUTING.md](CONTRIBUTING.md) for how the artwork pipeline works, its known problems and its constraints. The same guide covers code changes: no network, telemetry or third-party dependencies, Turkish and English strings for every visible message, and tests for behavior changes.
+Contributions are welcome. Two areas need help most:
+
+- **Exercise animations.** Each movement is currently two still poses with a crossfade.
+- **A Windows app.** Kıpır is macOS-only (plus the Chrome extension); a native Windows tray app is wanted.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how the artwork pipeline works, what a Windows version needs, and the constraints for both. The same guide covers code changes: no network, telemetry or third-party dependencies, Turkish and English strings for every visible message, and tests for behavior changes.
 
 ## License
 

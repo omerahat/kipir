@@ -70,3 +70,7 @@ The native delivery boundary returns all five relevant UNNotificationSettings va
 The delegate is synchronously configured in NotificationManager initialization, before its asynchronous settings read; AppController's strong notification-manager property retains it for the app lifetime. Foreground delivery requests `.banner` and `.list`; `.sound` is requested only when content has sound. Request sound itself requires both app preference and system sound availability. Background presentation remains macOS-owned. Neither foreground options nor settings inspection can prove presentation or override Focus.
 
 Settings refresh on appearance, application activation and each test. The Open Notification Settings action uses public NSWorkspace opening APIs with a best-effort pane URL and bundle query. macOS does not provide a public guaranteed per-app notification-pane navigation API here; failed URL opening falls back to opening System Settings, and manual navigation guidance remains even after accepted URL opening. No private API, preference writing, critical alert or overlay is used.
+
+## Chrome extension
+`extension/` is a separate Manifest V3 implementation with the same semantics: `extension/src/core/engine.ts` ports `BreakScheduler`, and a service-worker controller replaces `AppController`. It shares no code with the Swift targets, only the resources under `Kipir/Resources`, which its build reads. See `extension/docs/ARCHITECTURE.md` (DECISIONS 033).
+

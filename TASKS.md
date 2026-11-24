@@ -131,3 +131,14 @@ Automated evidence is in TESTING.md ("0.2 integration"); unchecked items need a 
 - [ ] Motion must not move the ring, the Pause/Resume row or the meeting toggle (DECISIONS 031); expanding content animates downward only.
 - [ ] Honor Reduce Motion (no animation, same final layout); keep `TimelineView` rendering-only and add no second countdown timer.
 - [ ] Verify on device in Light/Dark and Turkish/English, then record evidence in TESTING.md.
+
+## Chrome extension (2026-11-23, `extension/`)
+- [x] MV3 project (TypeScript, React, Vite) with permissions limited to storage, alarms, notifications, idle and offscreen. Acceptance: the packager verifies the manifest, permissions, absence of remote code and of the e2e hook.
+- [x] Scheduler port with lifecycle recovery (worker restart, sleep gaps, browser restart and extension update via a session marker). Acceptance: 96 Vitest tests pass.
+- [x] Popup, exercises, settings, badge, notifications and sounds at native feature parity, with documented browser differences. Acceptance: 12 Playwright tests pass in real Chromium, including the unzipped release ZIP.
+- [x] Store package and documentation. Acceptance: `release/kipir-chrome-0.2.1.zip`; README, FEATURE_PARITY, ARCHITECTURE, TESTING and CHROME_WEB_STORE in `extension/`.
+- [ ] Manual acceptance in Google Chrome on a real Mac. Acceptance: the checklist in `extension/docs/CHROME_WEB_STORE.md` passes (notification banners, clicks and buttons, audible sound, real idle, lock and sleep, toolbar badge, VoiceOver).
+- [ ] Chrome Web Store submission. Acceptance: reviewed screenshots, a privacy note on the website if the dashboard asks for one, and explicit maintainer authorization.
+
+## Windows app (help wanted, not started)
+- [ ] Native Windows tray app with the same semantics. Acceptance: the requirements and constraints in CONTRIBUTING.md; ported scheduler tests pass.

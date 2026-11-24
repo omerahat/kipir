@@ -118,3 +118,18 @@ Root cause: `MenuBarView` rendered a one-line state note (`ui.status.note.<statu
 
 ## 032 — Smooth ring between heartbeats
 Cause of the "chunky" ring: the scheduler advances only on the 1 s controller heartbeat (timer tolerance 0.2 s), and the ring drew `remainingFraction` directly, so it stepped once per tick (clearly visible on short countdowns). `CountdownRing` now keeps a displayed value and animates a small forward decrease linearly over 1 s. This is rendering only: no second timer, the countdown value and semantics are untouched. Increases (snooze, reset), large jumps and Reduce Motion update instantly. The drawn arc lags the scheduler by at most one heartbeat. The digits still change once per second.
+
+## 033 — Chrome extension in `extension/`
+Kıpır also ships as a Manifest V3 Chrome extension. It ports the native semantics instead of becoming a plain wall-clock timer:
+- **Active time:** `chrome.idle`, with the detection interval set to the AFK threshold, replaces CoreGraphics idle seconds. `locked` maps to suspended, and the credit for the unconfirmed AFK tail is retracted when `idle` is reported.
+- **Sampling:** the service worker cannot keep a 1 s heartbeat. The engine is sampled on events and on one-shot alarms at most 60 s apart; gaps over 150 s or a backward clock are never credited.
+- **Restarts:** a `chrome.storage.session` marker identifies a new browser session (restart, install, update or reload). It restarts without credit, whichever event woke the worker first.
+- **Storage and notifications:** state is one atomic `chrome.storage.local` document. The reminder's attempt marker is committed before the notification is created, which keeps native's at-most-once rule.
+- **Reuse:** the build reads this app's strings and exercise PNGs, so there is one copy of the copy and the art.
+- **Accepted differences:** see `extension/docs/FEATURE_PARITY.md`. They include:
+  - two notification buttons instead of four
+  - a reminder up to the AFK threshold early when the target falls inside the unconfirmed tail
+  - very short unlocked sleeps that cannot be detected
+  - no launch at login or quit
+- The macOS app is unchanged.
+

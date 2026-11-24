@@ -1,5 +1,20 @@
 # Kıpır — Changelog
 
+## Unreleased — Chrome extension
+- New `extension/`: Kıpır as a Manifest V3 Chrome extension (Chrome 127+), version 0.2.1. It is prepared for the Chrome Web Store but not published (DECISIONS 033).
+- What it includes:
+  - a TypeScript port of the scheduler: confirmed active time with `chrome.idle`, AFK retraction, gap rejection, natural break, working hours, the cycle, snooze, skip, pause, meeting mode and day rollover
+  - the toolbar popup with the countdown ring and the exercise guide
+  - a badge with the remaining minutes
+  - Chrome notifications with Start break and Snooze, at most once per episode
+  - optional sounds through an offscreen document
+  - a settings page with every native setting
+  - Turkish and English, light and dark appearance
+- It reuses this app's `Localizable.strings`, exercise PNGs and icon at build time.
+- Tests: 96 unit and integration tests, and 12 real-Chromium tests that include the release ZIP.
+- The macOS app is unchanged.
+- Documentation: the README covers the extension, and CONTRIBUTING has a new help-wanted section for a Windows app.
+
 ## 0.2.1 — Pre-release stabilization
 - The countdown ring now starts full and empties counterclockwise from 12 o'clock, reaching empty exactly at zero; a snooze refills it.
 - The menu bar item has a fixed width in every state and language: it always shows the remaining minutes (or "Break"), with the state in the icon. The panel no longer jumps sideways on pause, resume or meeting toggles (DECISIONS 030).
